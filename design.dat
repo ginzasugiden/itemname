@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>商品名自動修正侍 - デザイン案</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif;
+      background: #1a1a2e;
+      color: #fff;
+      padding: 20px;
+    }
+    h1 { text-align: center; margin-bottom: 30px; }
+    .designs { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+    .design-card {
+      background: #16213e;
+      border-radius: 12px;
+      padding: 20px;
+      width: 320px;
+    }
+    .design-card h2 { 
+      text-align: center; 
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #444;
+    }
+    .preview { 
+      border-radius: 8px; 
+      overflow: hidden;
+      height: 400px;
+    }
+
+    /* ========== Design A: シンプル・モダン ========== */
+    .design-a {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+    }
+    .design-a .logo { font-size: 40px; margin-bottom: 10px; }
+    .design-a h3 { font-size: 18px; margin-bottom: 30px; color: #fff; }
+    .design-a .login-box {
+      background: rgba(255,255,255,0.95);
+      padding: 30px;
+      border-radius: 12px;
+      width: 100%;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+    .design-a input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 15px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .design-a button {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    /* ========== Design B: 和風テイスト ========== */
+    .design-b {
+      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%231a1a1a"/><circle cx="80" cy="20" r="15" fill="%23c41e3a" opacity="0.3"/></svg>'), 
+                  linear-gradient(180deg, #1a1a1a 0%, #2d1f1f 100%);
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      position: relative;
+    }
+    .design-b::before {
+      content: '';
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+      border: 1px solid #8b4513;
+      pointer-events: none;
+    }
+    .design-b .logo { font-size: 50px; margin-bottom: 5px; }
+    .design-b h3 { 
+      font-size: 20px; 
+      margin-bottom: 25px; 
+      color: #d4af37;
+      font-family: serif;
+      letter-spacing: 4px;
+    }
+    .design-b .login-box {
+      background: rgba(45,31,31,0.9);
+      padding: 25px;
+      border: 2px solid #8b4513;
+      width: 100%;
+    }
+    .design-b input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 15px;
+      background: #1a1a1a;
+      border: 1px solid #5c4033;
+      color: #fff;
+      font-size: 14px;
+    }
+    .design-b input::placeholder { color: #888; }
+    .design-b button {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(180deg, #c41e3a, #8b0000);
+      color: #d4af37;
+      border: 1px solid #d4af37;
+      font-size: 16px;
+      font-family: serif;
+      letter-spacing: 2px;
+      cursor: pointer;
+    }
+
+    /* ========== Design C: 楽天カラー ========== */
+    .design-c {
+      background: #fff;
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+    }
+    .design-c .header {
+      background: #bf0000;
+      color: #fff;
+      padding: 15px;
+      width: calc(100% + 60px);
+      margin: -30px -30px 30px -30px;
+      text-align: center;
+    }
+    .design-c .logo { font-size: 35px; }
+    .design-c h3 { font-size: 16px; color: #fff; margin-top: 5px; }
+    .design-c .login-box {
+      background: #fff;
+      padding: 25px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      width: 100%;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .design-c label {
+      display: block;
+      color: #333;
+      font-size: 13px;
+      margin-bottom: 5px;
+    }
+    .design-c input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .design-c button {
+      width: 100%;
+      padding: 12px;
+      background: #bf0000;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    .design-c .footer {
+      margin-top: 20px;
+      font-size: 11px;
+      color: #666;
+    }
+
+    .choice { 
+      text-align: center; 
+      margin-top: 15px;
+      padding: 10px;
+      background: #0f3460;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🗡️ 商品名自動修正侍 - デザイン案</h1>
+  
+  <div class="designs">
+    <!-- Design A -->
+    <div class="design-card">
+      <h2>A: シンプル・モダン</h2>
+      <div class="preview">
+        <div class="design-a">
+          <div class="logo">⚔️</div>
+          <h3>商品名自動修正侍</h3>
+          <div class="login-box">
+            <input type="text" placeholder="ユーザーID">
+            <input type="password" placeholder="パスワード">
+            <button>ログイン</button>
+          </div>
+        </div>
+      </div>
+      <div class="choice">洗練されたグラデーション<br>ビジネス向け</div>
+    </div>
+
+    <!-- Design B -->
+    <div class="design-card">
+      <h2>B: 和風テイスト</h2>
+      <div class="preview">
+        <div class="design-b">
+          <div class="logo">🏯</div>
+          <h3>商品名自動修正侍</h3>
+          <div class="login-box">
+            <input type="text" placeholder="ユーザーID">
+            <input type="password" placeholder="パスワード">
+            <button>参 る</button>
+          </div>
+        </div>
+      </div>
+      <div class="choice">侍・和のテーマ<br>ダーク＆ゴールド</div>
+    </div>
+
+    <!-- Design C -->
+    <div class="design-card">
+      <h2>C: 楽天カラー</h2>
+      <div class="preview">
+        <div class="design-c">
+          <div class="header">
+            <div class="logo">🛒</div>
+            <h3>商品名自動修正侍</h3>
+          </div>
+          <div class="login-box">
+            <label>ユーザーID</label>
+            <input type="text" placeholder="shop_id">
+            <label>パスワード</label>
+            <input type="password" placeholder="••••••••">
+            <button>ログイン</button>
+          </div>
+          <div class="footer">楽天ショップ運営支援ツール</div>
+        </div>
+      </div>
+      <div class="choice">楽天公式風<br>信頼感・親しみやすさ</div>
+    </div>
+  </div>
+</body>
+</html>
