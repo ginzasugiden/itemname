@@ -313,7 +313,7 @@ async function addTargetItems() {
   const count = itemNumbers.split(/[\n,]/).filter(s => s.trim()).length;
   
   setButtonLoading(btn, true);
-  showModalLoading('addItemModal', `商品情報を取得中... (${count}件)`);
+  showAddItemLoading(count);
   
   try {
     const result = await apiRequest('bulkAddTargetItems', { itemNumbers });
@@ -324,13 +324,14 @@ async function addTargetItems() {
       loadTargetItems();
     } else {
       showToast(result.message || '追加に失敗しました', 'error');
+      hideModalLoading('addItemModal');
     }
     
   } catch (error) {
     showToast('サーバーとの通信に失敗しました', 'error');
+    hideModalLoading('addItemModal');
   } finally {
     setButtonLoading(btn, false);
-    hideModalLoading('addItemModal');
   }
 }
 
@@ -341,41 +342,10 @@ function showDeleteConfirm(itemManageNumber, rowIndex) {
   document.getElementById('deleteConfirmModal').style.display = 'flex';
   hideModalLoading('deleteConfirmModal');
   
+  // ボタンをリセット
   const btn = document.getElementById('confirmDeleteBtn');
   btn.disabled = false;
   btn.innerHTML = '削除';
-}
-
-// 削除実行
-async function confirmDeleteItem() {
-  if (!deleteTargetItem) return;
-  
-  const btn = document.getElementById('confirmDeleteBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> 削除中...';
-  showModalLoading('deleteConfirmModal', '削除中...');
-  
-  try {
-    // rowIndexではなくitemManageNumberで削除
-    const result = await apiRequest('deleteTargetItem', { 
-      itemManageNumber: deleteTargetItem.itemManageNumber 
-    });
-    
-    if (result.success) {
-      showToast('商品を削除しました', 'success');
-      hideDeleteConfirmModal();
-      loadTargetItems();
-    } else {
-      showToast(result.message || '削除に失敗しました', 'error');
-    }
-    
-  } catch (error) {
-    showToast('サーバーとの通信に失敗しました', 'error');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '削除';
-    hideModalLoading('deleteConfirmModal');
-  }
 }
 
 // 削除確認モーダル非表示
@@ -392,10 +362,12 @@ async function confirmDeleteItem() {
   const btn = document.getElementById('confirmDeleteBtn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> 削除中...';
-  showModalLoading('deleteConfirmModal', '削除中...');
+  showDeleteLoading();
   
   try {
-    const result = await apiRequest('deleteTargetItem', { rowIndex: deleteTargetItem.rowIndex });
+    const result = await apiRequest('deleteTargetItem', { 
+      itemManageNumber: deleteTargetItem.itemManageNumber 
+    });
     
     if (result.success) {
       showToast('商品を削除しました', 'success');
@@ -403,20 +375,23 @@ async function confirmDeleteItem() {
       loadTargetItems();
     } else {
       showToast(result.message || '削除に失敗しました', 'error');
+      hideModalLoading('deleteConfirmModal');
     }
     
   } catch (error) {
     showToast('サーバーとの通信に失敗しました', 'error');
+    hideModalLoading('deleteConfirmModal');
   } finally {
     btn.disabled = false;
     btn.innerHTML = '削除';
-    hideModalLoading('deleteConfirmModal');
   }
 }
 
-// ==================== モーダルローディング ====================
-function showModalLoading(modalId, message = '処理中...') {
-  const modal = document.getElementById(modalId);
+// ==================== リッチローディングアニメーション ====================
+
+// 商品追加用ローディング
+function showAddItemLoading(count) {
+  const modal = document.getElementById('addItemModal');
   if (!modal) return;
   
   // 既存のローディングを削除
@@ -428,18 +403,71 @@ function showModalLoading(modalId, message = '処理中...') {
   overlay.className = 'modal-loading-overlay';
   overlay.innerHTML = `
     <div class="modal-loading-content">
-      <span class="spinner-large"></span>
-      <p>${message}</p>
+      <div class="loading-animation">
+        <div class="loading-pulse"></div>
+        <div class="loading-pulse"></div>
+        <div class="loading-ring"></div>
+        <div class="loading-package">📦</div>
+      </div>
+      <div class="loading-dots">
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+      </div>
+      <div class="loading-progress">
+        <div class="loading-progress-bar"></div>
+      </div>
+      <div class="loading-text">商品情報を取得中...</div>
+      <div class="loading-subtext">${count}件の商品を処理しています</div>
     </div>
   `;
   
   const modalElement = modal.querySelector('.modal');
   if (modalElement) {
-    modalElement.style.position = 'relative';
     modalElement.appendChild(overlay);
   }
 }
 
+// 削除用ローディング
+function showDeleteLoading() {
+  const modal = document.getElementById('deleteConfirmModal');
+  if (!modal) return;
+  
+  // 既存のローディングを削除
+  const existing = modal.querySelector('.modal-loading-overlay');
+  if (existing) existing.remove();
+  
+  // ローディングオーバーレイを追加
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-loading-overlay';
+  overlay.innerHTML = `
+    <div class="modal-loading-content">
+      <div class="loading-delete-animation">
+        <div class="delete-particles">
+          <div class="delete-particle"></div>
+          <div class="delete-particle"></div>
+          <div class="delete-particle"></div>
+          <div class="delete-particle"></div>
+        </div>
+        <div class="loading-delete-icon">🗑️</div>
+      </div>
+      <div class="loading-dots">
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+      </div>
+      <div class="loading-text">削除中...</div>
+      <div class="loading-subtext">しばらくお待ちください</div>
+    </div>
+  `;
+  
+  const modalElement = modal.querySelector('.modal');
+  if (modalElement) {
+    modalElement.appendChild(overlay);
+  }
+}
+
+// 汎用ローディング非表示
 function hideModalLoading(modalId) {
   const modal = document.getElementById(modalId);
   if (!modal) return;
