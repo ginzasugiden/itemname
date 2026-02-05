@@ -99,6 +99,7 @@
       <!-- タブナビゲーション -->
       <nav class="tab-nav">
         <button class="tab-btn active" data-tab="settings">⚙️ 設定</button>
+        <button class="tab-btn" data-tab="items">📦 対象商品</button>
         <button class="tab-btn" data-tab="events">📅 イベント</button>
         <button class="tab-btn" data-tab="logs">📋 ログ</button>
         <button class="tab-btn" data-tab="manual">▶️ 手動実行</button>
@@ -156,6 +157,40 @@
                 <button type="button" class="btn-secondary" onclick="loadSettings()">リセット</button>
               </div>
             </form>
+          </div>
+        </div>
+
+        <!-- 対象商品タブ -->
+        <div class="tab-content" id="tab-items">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">📦 対象商品管理</h2>
+              <div class="header-actions">
+                <button class="btn-secondary btn-sm" onclick="loadTargetItems()">🔄 更新</button>
+                <button class="btn-primary btn-sm" onclick="showAddItemModal()">➕ 商品追加</button>
+              </div>
+            </div>
+            
+            <div class="items-summary">
+              <span>登録商品数: <strong id="itemsCountDisplay">0</strong>件</span>
+            </div>
+            
+            <div class="table-container">
+              <table class="data-table" id="itemsTable">
+                <thead>
+                  <tr>
+                    <th>商品管理番号</th>
+                    <th>現在の商品名</th>
+                    <th>ステータス</th>
+                    <th>最終更新</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td colspan="5" class="loading">読み込み中...</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -241,6 +276,51 @@
       </div>
     </div>
   </main>
+
+  <!-- ========== 商品追加モーダル ========== -->
+  <div class="modal-overlay" id="addItemModal" style="display: none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>📦 対象商品を追加</h3>
+        <button class="modal-close" onclick="hideAddItemModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="newItemNumbers">商品管理番号</label>
+          <textarea id="newItemNumbers" rows="6" placeholder="商品管理番号を入力&#10;（複数の場合は改行で区切る）&#10;&#10;例:&#10;item-001&#10;item-002&#10;item-003"></textarea>
+          <small>複数の商品を一括追加する場合は、改行で区切って入力してください</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="hideAddItemModal()">キャンセル</button>
+        <button class="btn-primary" onclick="addTargetItems()" id="addItemBtn">
+          <span class="btn-text">追加</span>
+          <span class="btn-loading" style="display: none;">
+            <span class="spinner"></span> 追加中...
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 削除確認モーダル ========== -->
+  <div class="modal-overlay" id="deleteConfirmModal" style="display: none;">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3>⚠️ 削除確認</h3>
+        <button class="modal-close" onclick="hideDeleteConfirmModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <p>以下の商品を対象リストから削除しますか？</p>
+        <p class="delete-target"><strong id="deleteTargetNumber"></strong></p>
+        <p class="text-muted">※ 楽天の商品自体は削除されません</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="hideDeleteConfirmModal()">キャンセル</button>
+        <button class="btn-danger" onclick="confirmDeleteItem()" id="confirmDeleteBtn">削除</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ========== フッター ========== -->
   <footer class="footer">

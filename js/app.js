@@ -6,6 +6,9 @@
 // ==================== 設定 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbwL_odLRjbnirbyP18mtvOX5Uks7T-Gcc5uuyGlbOYtOjF5Dn6mv9gspiVcqEqK4g1l/exec';
 
+// 削除対象の一時保存
+let deleteTargetItem = null;
+
 // ==================== セッション管理 ====================
 const Session = {
   save(data) {
@@ -153,6 +156,7 @@ async function loadDashboardData() {
   await Promise.all([
     loadSettings(),
     loadEvents(),
+    loadTargetItems(),
   ]);
   
   updateStatusCards();
@@ -211,6 +215,151 @@ async function saveSettings(event) {
     loadSettings(); // 再読み込み
   } else {
     showToast(result.message || '設定の保存に失敗しました', 'error');
+  }
+}
+
+// ==================== 対象商品管理 ====================
+async function loadTargetItems() {
+  const result = await apiRequest('getTargetItems');
+  const tbody = document.querySelector('#itemsTable tbody');
+  const countDisplay = document.getElementById('itemsCountDisplay');
+  
+  if (result.success && result.data.items) {
+    const items = result.data.items;
+    countDisplay.textContent = items.length;
+    
+    // ステータスカードも更新
+    document.getElementById('targetItemsCount').textContent = items.length + '件';
+    
+    if (items.length > 0) {
+      tbody.innerHTML = items.map(item => {
+        let statusBadge = '';
+        switch (item.status) {
+          case 'SUCCESS':
+            statusBadge = '<span class="badge badge-success">成功</span>';
+            break;
+          case 'FAILED':
+            statusBadge = '<span class="badge badge-error">失敗</span>';
+            break;
+          case 'SKIPPED':
+            statusBadge = '<span class="badge badge-warning">スキップ</span>';
+            break;
+          case 'MANUAL_CHANGE':
+            statusBadge = '<span class="badge badge-warning">手動変更</span>';
+            break;
+          case '新規追加':
+            statusBadge = '<span class="badge badge-info">新規</span>';
+            break;
+          default:
+            statusBadge = item.status ? `<span class="badge badge-gray">${item.status}</span>` : '-';
+        }
+        
+        const lastUpdated = item.lastUpdated ? formatDatetime(new Date(item.lastUpdated)) : '-';
+        const title = item.currentTitle || item.baseTitle || '-';
+        
+        return `
+          <tr>
+            <td class="item-number">${escapeHtml(item.itemManageNumber)}</td>
+            <td class="item-title" title="${escapeHtml(title)}">${escapeHtml(title)}</td>
+            <td>${statusBadge}</td>
+            <td>${lastUpdated}</td>
+            <td>
+              <button class="btn-secondary btn-icon" onclick="showDeleteConfirm('${escapeHtml(item.itemManageNumber)}', ${item.rowIndex})" title="削除">
+                🗑️
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    } else {
+      tbody.innerHTML = '<tr><td colspan="5" class="loading">対象商品が登録されていません</td></tr>';
+    }
+    
+  } else {
+    tbody.innerHTML = '<tr><td colspan="5" class="loading">読み込みに失敗しました</td></tr>';
+    countDisplay.textContent = '0';
+  }
+}
+
+// 商品追加モーダル表示
+function showAddItemModal() {
+  document.getElementById('newItemNumbers').value = '';
+  document.getElementById('addItemModal').style.display = 'flex';
+}
+
+// 商品追加モーダル非表示
+function hideAddItemModal() {
+  document.getElementById('addItemModal').style.display = 'none';
+}
+
+// 商品追加
+async function addTargetItems() {
+  const textarea = document.getElementById('newItemNumbers');
+  const itemNumbers = textarea.value.trim();
+  const btn = document.getElementById('addItemBtn');
+  
+  if (!itemNumbers) {
+    showToast('商品管理番号を入力してください', 'warning');
+    return;
+  }
+  
+  setButtonLoading(btn, true);
+  
+  try {
+    const result = await apiRequest('bulkAddTargetItems', { itemNumbers });
+    
+    if (result.success) {
+      showToast(result.message, 'success');
+      hideAddItemModal();
+      loadTargetItems();
+    } else {
+      showToast(result.message || '追加に失敗しました', 'error');
+    }
+    
+  } catch (error) {
+    showToast('サーバーとの通信に失敗しました', 'error');
+  } finally {
+    setButtonLoading(btn, false);
+  }
+}
+
+// 削除確認モーダル表示
+function showDeleteConfirm(itemManageNumber, rowIndex) {
+  deleteTargetItem = { itemManageNumber, rowIndex };
+  document.getElementById('deleteTargetNumber').textContent = itemManageNumber;
+  document.getElementById('deleteConfirmModal').style.display = 'flex';
+}
+
+// 削除確認モーダル非表示
+function hideDeleteConfirmModal() {
+  document.getElementById('deleteConfirmModal').style.display = 'none';
+  deleteTargetItem = null;
+}
+
+// 削除実行
+async function confirmDeleteItem() {
+  if (!deleteTargetItem) return;
+  
+  const btn = document.getElementById('confirmDeleteBtn');
+  btn.disabled = true;
+  btn.textContent = '削除中...';
+  
+  try {
+    const result = await apiRequest('deleteTargetItem', { rowIndex: deleteTargetItem.rowIndex });
+    
+    if (result.success) {
+      showToast('商品を削除しました', 'success');
+      hideDeleteConfirmModal();
+      loadTargetItems();
+    } else {
+      showToast(result.message || '削除に失敗しました', 'error');
+    }
+    
+  } catch (error) {
+    showToast('サーバーとの通信に失敗しました', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '削除';
   }
 }
 
@@ -372,6 +521,8 @@ function setupTabs() {
       // タブ固有の処理
       if (tabId === 'logs') {
         loadLogs();
+      } else if (tabId === 'items') {
+        loadTargetItems();
       }
     });
   });
@@ -422,4 +573,14 @@ function formatDatetime(date) {
   const h = String(date.getHours()).padStart(2, '0');
   const min = String(date.getMinutes()).padStart(2, '0');
   return `${y}/${m}/${d} ${h}:${min}`;
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
