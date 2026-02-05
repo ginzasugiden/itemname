@@ -200,6 +200,9 @@ async function loadSettings() {
 async function saveSettings(event) {
   event.preventDefault();
   
+  const btn = document.getElementById('saveSettingsBtn');
+  setButtonLoading(btn, true);
+  
   const settings = {
     mode: document.getElementById('settingMode').value,
     dryRun: document.getElementById('settingDryRun').value === 'true',
@@ -208,13 +211,19 @@ async function saveSettings(event) {
     notifyEmail: document.getElementById('settingNotifyEmail').checked,
   };
   
-  const result = await apiRequest('updateSettings', { settings });
-  
-  if (result.success) {
-    showToast('設定を保存しました', 'success');
-    loadSettings(); // 再読み込み
-  } else {
-    showToast(result.message || '設定の保存に失敗しました', 'error');
+  try {
+    const result = await apiRequest('updateSettings', { settings });
+    
+    if (result.success) {
+      showToast('設定を保存しました', 'success');
+      loadSettings(); // 再読み込み
+    } else {
+      showToast(result.message || '設定の保存に失敗しました', 'error');
+    }
+  } catch (error) {
+    showToast('サーバーとの通信に失敗しました', 'error');
+  } finally {
+    setButtonLoading(btn, false);
   }
 }
 
