@@ -276,10 +276,19 @@ body {
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .btn-danger:hover {
   background: #dc2626;
+}
+
+.btn-danger:disabled {
+  background: var(--gray-400);
+  cursor: not-allowed;
 }
 
 .btn-sm {
@@ -304,11 +313,34 @@ body {
   gap: 8px;
 }
 
+/* ========== スピナー ========== */
 .spinner {
   width: 18px;
   height: 18px;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-top-color: var(--white);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+.spinner-dark {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--gray-200);
+  border-top-color: var(--rakuten-red);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+
+.spinner-large {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--gray-200);
+  border-top-color: var(--rakuten-red);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -659,6 +691,7 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .modal-sm {
@@ -728,6 +761,32 @@ body {
 .text-muted {
   color: var(--gray-500);
   font-size: 13px;
+}
+
+/* ========== モーダルローディングオーバーレイ ========== */
+.modal-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+  border-radius: var(--radius-lg);
+}
+
+.modal-loading-content {
+  text-align: center;
+}
+
+.modal-loading-content p {
+  margin-top: 15px;
+  font-size: 14px;
+  color: var(--gray-600);
+  font-weight: 500;
 }
 
 /* ========== フッター ========== */

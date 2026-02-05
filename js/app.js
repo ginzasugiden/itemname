@@ -220,9 +220,13 @@ async function saveSettings(event) {
 
 // ==================== 対象商品管理 ====================
 async function loadTargetItems() {
-  const result = await apiRequest('getTargetItems');
   const tbody = document.querySelector('#itemsTable tbody');
   const countDisplay = document.getElementById('itemsCountDisplay');
+  
+  // ローディング表示
+  tbody.innerHTML = '<tr><td colspan="5" class="loading"><span class="spinner-dark"></span> 読み込み中...</td></tr>';
+  
+  const result = await apiRequest('getTargetItems');
   
   if (result.success && result.data.items) {
     const items = result.data.items;
@@ -285,11 +289,13 @@ async function loadTargetItems() {
 function showAddItemModal() {
   document.getElementById('newItemNumbers').value = '';
   document.getElementById('addItemModal').style.display = 'flex';
+  hideModalLoading('addItemModal');
 }
 
 // 商品追加モーダル非表示
 function hideAddItemModal() {
   document.getElementById('addItemModal').style.display = 'none';
+  hideModalLoading('addItemModal');
 }
 
 // 商品追加
@@ -303,7 +309,11 @@ async function addTargetItems() {
     return;
   }
   
+  // 追加件数をカウント
+  const count = itemNumbers.split(/[\n,]/).filter(s => s.trim()).length;
+  
   setButtonLoading(btn, true);
+  showModalLoading('addItemModal', `商品情報を取得中... (${count}件)`);
   
   try {
     const result = await apiRequest('bulkAddTargetItems', { itemNumbers });
@@ -320,6 +330,7 @@ async function addTargetItems() {
     showToast('サーバーとの通信に失敗しました', 'error');
   } finally {
     setButtonLoading(btn, false);
+    hideModalLoading('addItemModal');
   }
 }
 
@@ -328,11 +339,18 @@ function showDeleteConfirm(itemManageNumber, rowIndex) {
   deleteTargetItem = { itemManageNumber, rowIndex };
   document.getElementById('deleteTargetNumber').textContent = itemManageNumber;
   document.getElementById('deleteConfirmModal').style.display = 'flex';
+  hideModalLoading('deleteConfirmModal');
+  
+  // ボタンをリセット
+  const btn = document.getElementById('confirmDeleteBtn');
+  btn.disabled = false;
+  btn.innerHTML = '削除';
 }
 
 // 削除確認モーダル非表示
 function hideDeleteConfirmModal() {
   document.getElementById('deleteConfirmModal').style.display = 'none';
+  hideModalLoading('deleteConfirmModal');
   deleteTargetItem = null;
 }
 
@@ -342,7 +360,8 @@ async function confirmDeleteItem() {
   
   const btn = document.getElementById('confirmDeleteBtn');
   btn.disabled = true;
-  btn.textContent = '削除中...';
+  btn.innerHTML = '<span class="spinner"></span> 削除中...';
+  showModalLoading('deleteConfirmModal', '削除中...');
   
   try {
     const result = await apiRequest('deleteTargetItem', { rowIndex: deleteTargetItem.rowIndex });
@@ -359,8 +378,43 @@ async function confirmDeleteItem() {
     showToast('サーバーとの通信に失敗しました', 'error');
   } finally {
     btn.disabled = false;
-    btn.textContent = '削除';
+    btn.innerHTML = '削除';
+    hideModalLoading('deleteConfirmModal');
   }
+}
+
+// ==================== モーダルローディング ====================
+function showModalLoading(modalId, message = '処理中...') {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+  
+  // 既存のローディングを削除
+  const existing = modal.querySelector('.modal-loading-overlay');
+  if (existing) existing.remove();
+  
+  // ローディングオーバーレイを追加
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-loading-overlay';
+  overlay.innerHTML = `
+    <div class="modal-loading-content">
+      <span class="spinner-large"></span>
+      <p>${message}</p>
+    </div>
+  `;
+  
+  const modalElement = modal.querySelector('.modal');
+  if (modalElement) {
+    modalElement.style.position = 'relative';
+    modalElement.appendChild(overlay);
+  }
+}
+
+function hideModalLoading(modalId) {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+  
+  const overlay = modal.querySelector('.modal-loading-overlay');
+  if (overlay) overlay.remove();
 }
 
 // ==================== イベント ====================
@@ -419,8 +473,12 @@ async function loadEvents() {
 
 // ==================== ログ ====================
 async function loadLogs() {
-  const result = await apiRequest('getLogs', { limit: 50 });
   const tbody = document.querySelector('#logsTable tbody');
+  
+  // ローディング表示
+  tbody.innerHTML = '<tr><td colspan="5" class="loading"><span class="spinner-dark"></span> 読み込み中...</td></tr>';
+  
+  const result = await apiRequest('getLogs', { limit: 50 });
   
   if (result.success && result.data.logs.length > 0) {
     tbody.innerHTML = result.data.logs.map(log => {
