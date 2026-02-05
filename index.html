@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>商品名自動修正侍 | 楽天ショップ運営支援ツール</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚔️</text></svg>">
+</head>
+<body>
+  <!-- ========== ヘッダー ========== -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">⚔️</span>
+        <span class="logo-text">商品名自動修正侍</span>
+      </div>
+      <div class="user-info" id="userInfo" style="display: none;">
+        <span id="shopName"></span>
+        <button class="btn-logout" onclick="logout()">ログアウト</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========== ログイン画面 ========== -->
+  <main class="main" id="loginPage">
+    <div class="login-container">
+      <div class="login-header">
+        <div class="login-icon">🏯</div>
+        <h1>商品名自動修正侍</h1>
+        <p>楽天ショップ運営支援ツール</p>
+      </div>
+      
+      <form class="login-form" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label for="userId">ユーザーID</label>
+          <input type="text" id="userId" placeholder="shop_id" required autocomplete="username">
+        </div>
+        
+        <div class="form-group">
+          <label for="password">パスワード</label>
+          <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        
+        <div class="error-message" id="loginError"></div>
+        
+        <button type="submit" class="btn-primary" id="loginBtn">
+          <span class="btn-text">ログイン</span>
+          <span class="btn-loading" style="display: none;">
+            <span class="spinner"></span> 認証中...
+          </span>
+        </button>
+      </form>
+      
+      <div class="login-footer">
+        <p>© 2024 商品名自動修正侍</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- ========== ダッシュボード ========== -->
+  <main class="main dashboard" id="dashboardPage" style="display: none;">
+    <div class="container">
+      <!-- ステータスカード -->
+      <section class="status-cards">
+        <div class="card status-card">
+          <div class="card-icon">📅</div>
+          <div class="card-content">
+            <h3>次回イベント</h3>
+            <p id="nextEvent">-</p>
+          </div>
+        </div>
+        
+        <div class="card status-card">
+          <div class="card-icon">📦</div>
+          <div class="card-content">
+            <h3>対象商品数</h3>
+            <p id="targetItemsCount">-</p>
+          </div>
+        </div>
+        
+        <div class="card status-card">
+          <div class="card-icon">⚡</div>
+          <div class="card-content">
+            <h3>実行モード</h3>
+            <p id="currentMode">-</p>
+          </div>
+        </div>
+        
+        <div class="card status-card">
+          <div class="card-icon">⏰</div>
+          <div class="card-content">
+            <h3>有効期限</h3>
+            <p id="expiryDate">-</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- タブナビゲーション -->
+      <nav class="tab-nav">
+        <button class="tab-btn active" data-tab="settings">⚙️ 設定</button>
+        <button class="tab-btn" data-tab="events">📅 イベント</button>
+        <button class="tab-btn" data-tab="logs">📋 ログ</button>
+        <button class="tab-btn" data-tab="manual">▶️ 手動実行</button>
+      </nav>
+
+      <!-- タブコンテンツ -->
+      <div class="tab-contents">
+        <!-- 設定タブ -->
+        <div class="tab-content active" id="tab-settings">
+          <div class="card">
+            <h2 class="card-title">⚙️ 基本設定</h2>
+            <form id="settingsForm" onsubmit="saveSettings(event)">
+              <div class="settings-grid">
+                <div class="form-group">
+                  <label for="settingMode">実行モード</label>
+                  <select id="settingMode">
+                    <option value="TARGET_LIST">TARGET_LIST（指定商品のみ）</option>
+                    <option value="ALL_ACTIVE">ALL_ACTIVE（全商品）</option>
+                  </select>
+                  <small>TARGET_LIST: 指定した商品のみ処理 / ALL_ACTIVE: 販売中の全商品を処理</small>
+                </div>
+                
+                <div class="form-group">
+                  <label for="settingDryRun">DryRunモード</label>
+                  <select id="settingDryRun">
+                    <option value="true">ON（テスト実行）</option>
+                    <option value="false">OFF（本番実行）</option>
+                  </select>
+                  <small>ON: 実際の更新は行わずテストのみ / OFF: 実際にAPIで商品名を更新</small>
+                </div>
+                
+                <div class="form-group">
+                  <label for="settingMaxItems">1回の最大処理件数</label>
+                  <input type="number" id="settingMaxItems" min="1" max="1000" value="500">
+                  <small>1回の実行で処理する商品の最大数</small>
+                </div>
+                
+                <div class="form-group">
+                  <label>通知設定</label>
+                  <div class="checkbox-group">
+                    <label class="checkbox-label">
+                      <input type="checkbox" id="settingNotifySlack">
+                      Slack通知
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" id="settingNotifyEmail">
+                      メール通知
+                    </label>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="form-actions">
+                <button type="submit" class="btn-primary">設定を保存</button>
+                <button type="button" class="btn-secondary" onclick="loadSettings()">リセット</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- イベントタブ -->
+        <div class="tab-content" id="tab-events">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">📅 イベントスケジュール</h2>
+              <button class="btn-secondary btn-sm" onclick="loadEvents()">🔄 更新</button>
+            </div>
+            <div class="table-container">
+              <table class="data-table" id="eventsTable">
+                <thead>
+                  <tr>
+                    <th>イベント</th>
+                    <th>Prefix</th>
+                    <th>開始日時</th>
+                    <th>終了日時</th>
+                    <th>状態</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td colspan="5" class="loading">読み込み中...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ログタブ -->
+        <div class="tab-content" id="tab-logs">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">📋 実行ログ</h2>
+              <button class="btn-secondary btn-sm" onclick="loadLogs()">🔄 更新</button>
+            </div>
+            <div class="table-container">
+              <table class="data-table" id="logsTable">
+                <thead>
+                  <tr>
+                    <th>日時</th>
+                    <th>商品番号</th>
+                    <th>アクション</th>
+                    <th>ステータス</th>
+                    <th>メッセージ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td colspan="5" class="loading">読み込み中...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 手動実行タブ -->
+        <div class="tab-content" id="tab-manual">
+          <div class="card">
+            <h2 class="card-title">▶️ 手動実行</h2>
+            <div class="manual-run-section">
+              <div class="warning-box">
+                <strong>⚠️ 注意</strong>
+                <p>この画面からはDryRun（テスト実行）のみ実行できます。</p>
+                <p>本番実行はGoogle Apps Scriptから直接行ってください。</p>
+              </div>
+              
+              <div class="run-actions">
+                <button class="btn-primary btn-lg" onclick="runDryRun()" id="runDryRunBtn">
+                  <span class="btn-text">🔍 DryRun実行（テスト）</span>
+                  <span class="btn-loading" style="display: none;">
+                    <span class="spinner"></span> 実行中...
+                  </span>
+                </button>
+              </div>
+              
+              <div class="run-result" id="runResult" style="display: none;">
+                <h4>実行結果</h4>
+                <p id="runResultMessage"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ========== フッター ========== -->
+  <footer class="footer">
+    <p>© 2024 商品名自動修正侍 - 楽天ショップ運営支援ツール</p>
+  </footer>
+
+  <!-- トースト通知 -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
