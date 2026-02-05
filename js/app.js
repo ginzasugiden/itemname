@@ -341,10 +341,41 @@ function showDeleteConfirm(itemManageNumber, rowIndex) {
   document.getElementById('deleteConfirmModal').style.display = 'flex';
   hideModalLoading('deleteConfirmModal');
   
-  // ボタンをリセット
   const btn = document.getElementById('confirmDeleteBtn');
   btn.disabled = false;
   btn.innerHTML = '削除';
+}
+
+// 削除実行
+async function confirmDeleteItem() {
+  if (!deleteTargetItem) return;
+  
+  const btn = document.getElementById('confirmDeleteBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 削除中...';
+  showModalLoading('deleteConfirmModal', '削除中...');
+  
+  try {
+    // rowIndexではなくitemManageNumberで削除
+    const result = await apiRequest('deleteTargetItem', { 
+      itemManageNumber: deleteTargetItem.itemManageNumber 
+    });
+    
+    if (result.success) {
+      showToast('商品を削除しました', 'success');
+      hideDeleteConfirmModal();
+      loadTargetItems();
+    } else {
+      showToast(result.message || '削除に失敗しました', 'error');
+    }
+    
+  } catch (error) {
+    showToast('サーバーとの通信に失敗しました', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '削除';
+    hideModalLoading('deleteConfirmModal');
+  }
 }
 
 // 削除確認モーダル非表示
