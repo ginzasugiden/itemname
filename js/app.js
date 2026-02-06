@@ -487,6 +487,11 @@ function hideModalLoading(modalId) {
 
 // ==================== イベント ====================
 async function loadEvents() {
+  const tbody = document.querySelector('#eventsTable tbody');
+  
+  // ローディング表示
+  tbody.innerHTML = '<tr><td colspan="5" class="loading"><span class="spinner-dark"></span> 読み込み中...</td></tr>';
+  
   const result = await apiRequest('getEvents', { futureOnly: true });
   const tbody = document.querySelector('#eventsTable tbody');
   
@@ -656,6 +661,8 @@ function setupTabs() {
         loadLogs();
       } else if (tabId === 'items') {
         loadTargetItems();
+      } else if (tabId === 'events') {
+        loadEvents();
       }
     });
   });
