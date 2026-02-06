@@ -549,7 +549,14 @@ async function loadLogs() {
   const result = await apiRequest('getLogs', { limit: 50 });
   
   if (result.success && result.data.logs.length > 0) {
-    tbody.innerHTML = result.data.logs.map(log => {
+    // 新しい順（降順）にソート
+    const sortedLogs = result.data.logs.sort((a, b) => {
+      const dateA = new Date(a.timestamp);
+      const dateB = new Date(b.timestamp);
+      return dateB - dateA; // 降順
+    });
+    
+    tbody.innerHTML = sortedLogs.map(log => {
       let statusBadge = '';
       switch (log.status) {
         case 'SUCCESS':
