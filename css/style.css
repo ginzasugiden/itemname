@@ -119,24 +119,19 @@ body {
 
 /* ========== ログイン画面 ========== */
 .login-container {
-  max-width: 400px;
-  margin: 0 auto;
-  background: var(--white);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  overflow: hidden;
+  max-width: 520px;       /* 400→520に拡大 */
+  ...
 }
-
 .login-header {
-  background: var(--rakuten-red);
-  color: var(--white);
-  padding: 30px;
-  text-align: center;
+  padding: 16px;          /* 30→16に縮小 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 }
-
 .login-icon {
-  font-size: 50px;
-  margin-bottom: 10px;
+  font-size: 32px;        /* 50→32に縮小 */
+  margin-bottom: 0;       /* 10→0 */
 }
 
 .login-header h1 {
@@ -145,12 +140,12 @@ body {
 }
 
 .login-header p {
-  font-size: 13px;
-  opacity: 0.9;
+  font-size: 15px;
+  font-weight: bold;
+  opacity: 1;
 }
-
 .login-form {
-  padding: 30px;
+  padding: 24px 30px;     /* 上下を少し詰める */
 }
 
 .form-group {
