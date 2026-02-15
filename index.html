@@ -122,21 +122,6 @@
                 </div>
                 
                 <div class="form-group">
-                  <label for="settingDryRun">DryRunモード</label>
-                  <select id="settingDryRun">
-                    <option value="true">ON（テスト実行）</option>
-                    <option value="false">OFF（本番実行）</option>
-                  </select>
-                  <small>ON: 実際の更新は行わずテストのみ / OFF: 実際にAPIで商品名を更新</small>
-                </div>
-                
-                <div class="form-group">
-                  <label for="settingMaxItems">1回の最大処理件数</label>
-                  <input type="number" id="settingMaxItems" min="1" max="1000" value="500">
-                  <small>1回の実行で処理する商品の最大数</small>
-                </div>
-                
-                <div class="form-group">
                   <label>通知設定</label>
                   <div class="checkbox-group">
                     <label class="checkbox-label">
@@ -147,6 +132,29 @@
                       <input type="checkbox" id="settingNotifyEmail">
                       メール通知
                     </label>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 管理者専用設定（一般ユーザーには非表示） -->
+              <div class="admin-only" id="adminSettings">
+                <div class="admin-settings-header">
+                  <h3 class="admin-settings-title">🔧 開発者設定</h3>
+                </div>
+                <div class="settings-grid">
+                  <div class="form-group">
+                    <label for="settingDryRun">DryRunモード</label>
+                    <select id="settingDryRun">
+                      <option value="true">ON（テスト実行）</option>
+                      <option value="false">OFF（本番実行）</option>
+                    </select>
+                    <small>ON: 実際の更新は行わずテストのみ / OFF: 実際にAPIで商品名を更新</small>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="settingMaxItems">1回の最大処理件数</label>
+                    <input type="number" id="settingMaxItems" min="1" max="1000" value="500">
+                    <small>1回の実行で処理する商品の最大数</small>
                   </div>
                 </div>
               </div>
