@@ -1126,3 +1126,26 @@ body {
     flex: 1;
   }
 }
+
+/* =====================================================
+   style.css の末尾に以下を追加してください
+   ===================================================== */
+
+/* 管理者専用要素の非表示 */
+.admin-only.hidden {
+  display: none !important;
+}
+
+/* 開発者設定セクション */
+.admin-settings-header {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 2px dashed #e0e0e0;
+}
+
+.admin-settings-title {
+  font-size: 16px;
+  color: #666;
+  margin: 0 0 16px 0;
+  font-weight: 600;
+}
