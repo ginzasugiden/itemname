@@ -1,6 +1,8 @@
 /**
  * 商品名自動修正侍 - Frontend JavaScript
  * GAS Web API との連携
+ * 
+ * [ROLE] 管理者/一般ユーザー表示制御対応
  */
 
 // ==================== 設定 ====================
@@ -29,6 +31,12 @@ const Session = {
     return session && session.token && session.userId;
   }
 };
+
+// [ROLE] 管理者判定ヘルパー
+function isAdmin() {
+  const session = Session.get();
+  return session && session.role === 'admin';
+}
 
 // ==================== API通信 ====================
 async function apiRequest(action, data = {}) {
@@ -95,6 +103,22 @@ function showDashboard() {
   document.getElementById('dashboardPage').style.display = 'block';
   document.getElementById('userInfo').style.display = 'flex';
   document.getElementById('shopName').textContent = session.shopName || session.userId;
+  
+  // [ROLE] 管理者/一般ユーザーの表示制御
+  applyRoleVisibility();
+}
+
+/**
+ * [ROLE] ロールに基づいてUIの表示/非表示を制御
+ */
+function applyRoleVisibility() {
+  const adminElements = document.querySelectorAll('.admin-only');
+  
+  if (isAdmin()) {
+    adminElements.forEach(el => el.classList.remove('hidden'));
+  } else {
+    adminElements.forEach(el => el.classList.add('hidden'));
+  }
 }
 
 // ==================== ログイン ====================
@@ -114,13 +138,14 @@ async function handleLogin(event) {
     const result = await apiRequest('login', { userId, password });
     
     if (result.success) {
-      // セッション保存
+      // [ROLE] セッション保存にrole追加
       Session.save({
         userId: result.data.userId,
         token: result.data.token,
         shopName: result.data.shopName,
         email: result.data.email,
         expiry: result.data.expiry,
+        role: result.data.role || 'user',
       });
       
       showToast('ログインしました', 'success');
@@ -181,16 +206,24 @@ async function loadSettings() {
   if (result.success) {
     const settings = result.data.settings;
     
-    // フォームに反映
+    // 共通設定（全ユーザー表示）
     document.getElementById('settingMode').value = settings.mode || 'TARGET_LIST';
-    document.getElementById('settingDryRun').value = String(settings.dryRun);
-    document.getElementById('settingMaxItems').value = settings.maxItemsPerRun || 500;
     document.getElementById('settingNotifySlack').checked = settings.notifySlack || false;
     document.getElementById('settingNotifyEmail').checked = settings.notifyEmail || false;
     
+    // 管理者専用設定（非表示でもフォーム値はセット）
+    document.getElementById('settingDryRun').value = String(settings.dryRun);
+    document.getElementById('settingMaxItems').value = settings.maxItemsPerRun || 500;
+    
     // ステータスカード更新
     document.getElementById('targetItemsCount').textContent = result.data.targetItemsCount + '件';
-    document.getElementById('currentMode').textContent = settings.dryRun ? 'DryRun' : '本番';
+    
+    // [ROLE] 管理者にはDryRun状態を表示、一般ユーザーには「本番」固定
+    if (isAdmin()) {
+      document.getElementById('currentMode').textContent = settings.dryRun ? 'DryRun' : '本番';
+    } else {
+      document.getElementById('currentMode').textContent = '本番';
+    }
     
   } else {
     showToast(result.message || '設定の読み込みに失敗しました', 'error');
@@ -203,13 +236,18 @@ async function saveSettings(event) {
   const btn = document.getElementById('saveSettingsBtn');
   setButtonLoading(btn, true);
   
+  // 共通設定
   const settings = {
     mode: document.getElementById('settingMode').value,
-    dryRun: document.getElementById('settingDryRun').value === 'true',
-    maxItemsPerRun: parseInt(document.getElementById('settingMaxItems').value, 10),
     notifySlack: document.getElementById('settingNotifySlack').checked,
     notifyEmail: document.getElementById('settingNotifyEmail').checked,
   };
+  
+  // [ROLE] 管理者のみ: DryRun・最大処理件数を含める
+  if (isAdmin()) {
+    settings.dryRun = document.getElementById('settingDryRun').value === 'true';
+    settings.maxItemsPerRun = parseInt(document.getElementById('settingMaxItems').value, 10);
+  }
   
   try {
     const result = await apiRequest('updateSettings', { settings });
@@ -493,7 +531,6 @@ async function loadEvents() {
   tbody.innerHTML = '<tr><td colspan="5" class="loading"><span class="spinner-dark"></span> 読み込み中...</td></tr>';
   
   const result = await apiRequest('getEvents', { futureOnly: true });
-//  const tbody = document.querySelector('#eventsTable tbody');
   
   if (result.success && result.data.events.length > 0) {
     const now = new Date();
