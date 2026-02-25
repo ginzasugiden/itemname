@@ -624,40 +624,101 @@ async function generateEvents() {
   }
 }
 
-// マラソン追加モーダル
-function showAddMarathonModal() {
-  document.getElementById('marathonStart').value = '';
-  document.getElementById('marathonEnd').value = '';
-  document.getElementById('addMarathonModal').style.display = 'flex';
+// イベント種類ごとのプリセット
+const EVENT_PRESETS = {
+  MARATHON:      { priority: 1, prefixLong: '【お買い物マラソン】', prefixMid: '【マラソン】', prefixShort: '【SALE】' },
+  WONDERFUL_DAY: { priority: 4, prefixLong: '【ワンダフルデー】',   prefixMid: '【Wデー】',    prefixShort: '【WD】' },
+  FIVE_DAY:      { priority: 2, prefixLong: '【本日5の日】',       prefixMid: '【5の日】',    prefixShort: '【5】' },
+  ZERO_DAY:      { priority: 2, prefixLong: '【本日0の日】',       prefixMid: '【0の日】',    prefixShort: '【0】' },
+  ICHIBA_DAY:    { priority: 3, prefixLong: '【いちばの日】',      prefixMid: '【市場の日】',  prefixShort: '【市】' },
+};
+
+// イベント追加モーダル
+function showAddEventModal() {
+  document.getElementById('eventType').value = 'MARATHON';
+  document.getElementById('eventPriority').value = '1';
+  document.getElementById('eventStart').value = '';
+  document.getElementById('eventEnd').value = '';
+  document.getElementById('customEventKey').value = '';
+  document.getElementById('customPrefixLong').value = '';
+  document.getElementById('customPrefixMid').value = '';
+  document.getElementById('customPrefixShort').value = '';
+  document.getElementById('customEventFields').style.display = 'none';
+  document.getElementById('addEventModal').style.display = 'flex';
 }
 
-function hideAddMarathonModal() {
-  document.getElementById('addMarathonModal').style.display = 'none';
+function hideAddEventModal() {
+  document.getElementById('addEventModal').style.display = 'none';
 }
 
-// マラソンイベント追加
-async function addMarathonEvent() {
-  const startInput = document.getElementById('marathonStart').value;
-  const endInput = document.getElementById('marathonEnd').value;
+function onEventTypeChange() {
+  const eventType = document.getElementById('eventType').value;
+  const customFields = document.getElementById('customEventFields');
+
+  if (eventType === 'CUSTOM') {
+    customFields.style.display = 'block';
+    document.getElementById('eventPriority').value = '4';
+  } else {
+    customFields.style.display = 'none';
+    const preset = EVENT_PRESETS[eventType];
+    if (preset) {
+      document.getElementById('eventPriority').value = String(preset.priority);
+    }
+  }
+}
+
+// イベント追加
+async function addEvent() {
+  const eventType = document.getElementById('eventType').value;
+  const startInput = document.getElementById('eventStart').value;
+  const endInput = document.getElementById('eventEnd').value;
+  const priority = parseInt(document.getElementById('eventPriority').value, 10) || 4;
 
   if (!startInput || !endInput) {
     showToast('開始日時と終了日時を入力してください', 'warning');
     return;
   }
 
+  let eventKey, prefixLong, prefixMid, prefixShort;
+
+  if (eventType === 'CUSTOM') {
+    eventKey = document.getElementById('customEventKey').value.trim();
+    prefixLong = document.getElementById('customPrefixLong').value.trim();
+    prefixMid = document.getElementById('customPrefixMid').value.trim();
+    prefixShort = document.getElementById('customPrefixShort').value.trim();
+
+    if (!eventKey) {
+      showToast('イベントキーを入力してください', 'warning');
+      return;
+    }
+    if (!prefixLong) {
+      showToast('Prefix（長）を入力してください', 'warning');
+      return;
+    }
+  } else {
+    const preset = EVENT_PRESETS[eventType];
+    eventKey = eventType;
+    prefixLong = preset.prefixLong;
+    prefixMid = preset.prefixMid;
+    prefixShort = preset.prefixShort;
+  }
+
   // datetime-local → "YYYY/MM/DD HH:mm:ss" 形式に変換
   const startDatetime = startInput.replace('T', ' ').replace(/-/g, '/') + ':00';
   const endDatetime = endInput.replace('T', ' ').replace(/-/g, '/') + ':00';
 
-  const btn = document.getElementById('addMarathonBtn');
+  const btn = document.getElementById('addEventBtn');
   setButtonLoading(btn, true);
 
   try {
-    const result = await apiRequest('addMarathonEvent', { startDatetime, endDatetime });
+    const result = await apiRequest('addEvent', {
+      eventKey, startDatetime, endDatetime, priority,
+      prefixLong, prefixMid: prefixMid || prefixLong, prefixShort: prefixShort || prefixLong,
+    });
 
     if (result.success) {
       showToast(result.message, 'success');
-      hideAddMarathonModal();
+      hideAddEventModal();
       loadEvents();
     } else {
       showToast(result.message || '追加に失敗しました', 'error');

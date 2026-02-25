@@ -330,6 +330,29 @@ function addMarathonEvent(startDatetimeStr, endDatetimeStr) {
 }
 
 /**
+ * EVENTSシートにイベント行を追加（汎用）
+ * @param {Object} eventData - { eventKey, startDatetime, endDatetime, priority, prefixLong, prefixMid, prefixShort }
+ */
+function addEventRow(eventData) {
+  const sheet = getOrCreateSheet_(SHEET_NAMES.EVENTS);
+  const lastRow = sheet.getLastRow();
+
+  const row = [
+    eventData.eventKey,
+    eventData.startDatetime,
+    eventData.endDatetime,
+    eventData.priority || 4,
+    eventData.prefixLong || '',
+    eventData.prefixMid || '',
+    eventData.prefixShort || '',
+    true
+  ];
+
+  sheet.getRange(lastRow + 1, 1, 1, row.length).setValues([row]);
+  Logger.log('イベント追加: ' + eventData.eventKey + ' ' + eventData.startDatetime + ' ～ ' + eventData.endDatetime);
+}
+
+/**
  * EVENTSシートから全イベントを読み込む（disabled含む、行番号付き）
  * フロントエンド管理画面用
  */

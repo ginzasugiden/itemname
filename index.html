@@ -219,7 +219,7 @@
                     <span class="spinner"></span> 生成中...
                   </span>
                 </button>
-                <button class="btn-primary btn-sm admin-only" onclick="showAddMarathonModal()">➕ マラソン追加</button>
+                <button class="btn-primary btn-sm admin-only" onclick="showAddEventModal()">+ イベント追加</button>
               </div>
             </div>
             <div class="table-container">
@@ -344,26 +344,60 @@
     </div>
   </div>
 
-  <!-- ========== マラソン追加モーダル ========== -->
-  <div class="modal-overlay" id="addMarathonModal" style="display: none;">
-    <div class="modal modal-sm">
+  <!-- ========== イベント追加モーダル ========== -->
+  <div class="modal-overlay" id="addEventModal" style="display: none;">
+    <div class="modal">
       <div class="modal-header">
-        <h3>🏃 マラソンイベント追加</h3>
-        <button class="modal-close" onclick="hideAddMarathonModal()">×</button>
+        <h3>📅 イベント追加</h3>
+        <button class="modal-close" onclick="hideAddEventModal()">×</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label for="marathonStart">開始日時</label>
-          <input type="datetime-local" id="marathonStart" required>
+          <label for="eventType">イベント種類</label>
+          <select id="eventType" onchange="onEventTypeChange()">
+            <option value="MARATHON">お買い物マラソン</option>
+            <option value="WONDERFUL_DAY">ワンダフルデー</option>
+            <option value="FIVE_DAY">5の日</option>
+            <option value="ZERO_DAY">0の日</option>
+            <option value="ICHIBA_DAY">いちばの日</option>
+            <option value="CUSTOM">カスタム</option>
+          </select>
+        </div>
+        <div id="customEventFields" style="display: none;">
+          <div class="form-group">
+            <label for="customEventKey">イベントキー</label>
+            <input type="text" id="customEventKey" placeholder="例: MY_EVENT">
+          </div>
+          <div class="form-group">
+            <label for="customPrefixLong">Prefix（長）</label>
+            <input type="text" id="customPrefixLong" placeholder="例: 【マイイベント】">
+          </div>
+          <div class="form-group">
+            <label for="customPrefixMid">Prefix（中）</label>
+            <input type="text" id="customPrefixMid" placeholder="例: 【マイ】">
+          </div>
+          <div class="form-group">
+            <label for="customPrefixShort">Prefix（短）</label>
+            <input type="text" id="customPrefixShort" placeholder="例: 【M】">
+          </div>
         </div>
         <div class="form-group">
-          <label for="marathonEnd">終了日時</label>
-          <input type="datetime-local" id="marathonEnd" required>
+          <label for="eventPriority">優先度</label>
+          <input type="number" id="eventPriority" min="1" max="99" value="4">
+          <small>数値が小さいほど優先（マラソン=1、5/0の日=2、いちば=3、ワンダフル=4）</small>
+        </div>
+        <div class="form-group">
+          <label for="eventStart">開始日時</label>
+          <input type="datetime-local" id="eventStart" required>
+        </div>
+        <div class="form-group">
+          <label for="eventEnd">終了日時</label>
+          <input type="datetime-local" id="eventEnd" required>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn-secondary" onclick="hideAddMarathonModal()">キャンセル</button>
-        <button class="btn-primary" onclick="addMarathonEvent()" id="addMarathonBtn">
+        <button class="btn-secondary" onclick="hideAddEventModal()">キャンセル</button>
+        <button class="btn-primary" onclick="addEvent()" id="addEventBtn">
           <span class="btn-text">追加</span>
           <span class="btn-loading" style="display: none;">
             <span class="spinner"></span> 追加中...
