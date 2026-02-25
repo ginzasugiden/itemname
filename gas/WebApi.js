@@ -155,10 +155,12 @@ function refreshUserContext_(userId) {
     
     for (let i = 1; i < data.length; i++) {
       if (data[i][colIndex['id']] === userId) {
+        const sheetRole = colIndex['role'] !== undefined ? (data[i][colIndex['role']] || '') : '';
+        const resolvedRole = sheetRole || (userId === 'tokyoflower' ? 'admin' : 'user');
         const context = {
           userId: userId,
           sid: String(data[i][colIndex['sid']] || ''),
-          role: data[i][colIndex['role']] || 'user',
+          role: resolvedRole,
           credentials: {
             serviceSecret: data[i][colIndex['serviceSecret']] || '',
             licenseKey: data[i][colIndex['licenseKey']] || '',
@@ -291,6 +293,10 @@ function authenticateUser_(userId, encodedPassword) {
       }
       
       // 認証成功
+      // roleはシートのカラム→なければuserIdで判定
+      const sheetRole = colIndex['role'] !== undefined ? (row[colIndex['role']] || '') : '';
+      const resolvedRole = sheetRole || (userId === 'tokyoflower' ? 'admin' : 'user');
+
       return {
         success: true,
         user: {
@@ -301,7 +307,7 @@ function authenticateUser_(userId, encodedPassword) {
           serviceSecret: row[colIndex['serviceSecret']] || '',
           licenseKey: row[colIndex['licenseKey']] || '',
           sid: row[colIndex['sid']] || '',
-          role: row[colIndex['role']] || 'user',   // ★ この1行を追加
+          role: resolvedRole,
         },
       };
     }
