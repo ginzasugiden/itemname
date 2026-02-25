@@ -11,8 +11,8 @@
  *   - getUserContext_() ヘルパーで認証+sid+credentialsを一括取得
  */
 
-// 認証用スプレッドシートID
-const AUTH_SPREADSHEET_ID = '1iYeV2SbOVoRH8Qjm2d1w5tWmhlE_zcc-yO1tDSLN7Rk';
+// 認証用スプレッドシートID（スクリプトプロパティから取得）
+const AUTH_SPREADSHEET_ID = PropertiesService.getScriptProperties().getProperty('AUTH_SPREADSHEET_ID');
 const AUTH_SHEET_NAME = 'api_key';
 
 /**

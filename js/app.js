@@ -552,8 +552,8 @@ async function loadEvents() {
       
       return `
         <tr>
-          <td><strong>${event.eventKey}</strong></td>
-          <td>${event.prefixLong}</td>
+          <td><strong>${escapeHtml(event.eventKey)}</strong></td>
+          <td>${escapeHtml(event.prefixLong)}</td>
           <td>${formatDatetime(start)}</td>
           <td>${formatDatetime(end)}</td>
           <td>${statusBadge}</td>
@@ -620,10 +620,10 @@ async function loadLogs() {
       return `
         <tr>
           <td>${timestamp}</td>
-          <td>${log.itemManageNumber || '-'}</td>
-          <td>${log.action || '-'}</td>
+          <td>${escapeHtml(log.itemManageNumber || '-')}</td>
+          <td>${escapeHtml(log.action || '-')}</td>
           <td>${statusBadge}</td>
-          <td>${log.message || '-'}</td>
+          <td>${escapeHtml(log.message || '-')}</td>
         </tr>
       `;
     }).join('');
