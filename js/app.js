@@ -218,12 +218,7 @@ async function loadSettings() {
     // ステータスカード更新
     document.getElementById('targetItemsCount').textContent = result.data.targetItemsCount + '件';
     
-    // [ROLE] 管理者にはDryRun状態を表示、一般ユーザーには「本番」固定
-    if (isAdmin()) {
-      document.getElementById('currentMode').textContent = settings.dryRun ? 'DryRun' : '本番';
-    } else {
-      document.getElementById('currentMode').textContent = '本番';
-    }
+    document.getElementById('currentMode').textContent = settings.dryRun ? 'DryRun' : '本番';
     
   } else {
     showToast(result.message || '設定の読み込みに失敗しました', 'error');
@@ -239,13 +234,13 @@ async function saveSettings(event) {
   // 共通設定
   const settings = {
     mode: document.getElementById('settingMode').value,
+    dryRun: document.getElementById('settingDryRun').value === 'true',
     notifySlack: document.getElementById('settingNotifySlack').checked,
     notifyEmail: document.getElementById('settingNotifyEmail').checked,
   };
-  
-  // [ROLE] 管理者のみ: DryRun・最大処理件数を含める
+
+  // [ROLE] 管理者のみ: 最大処理件数を含める
   if (isAdmin()) {
-    settings.dryRun = document.getElementById('settingDryRun').value === 'true';
     settings.maxItemsPerRun = parseInt(document.getElementById('settingMaxItems').value, 10);
   }
   
