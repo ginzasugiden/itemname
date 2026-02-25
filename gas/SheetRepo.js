@@ -61,6 +61,17 @@ function initializeSheet_(sheet, sheetName) {
     sheet.getRange(1, 1, 1, headers[sheetName].length).setFontWeight('bold');
     sheet.setFrozenRows(1);
   }
+
+  // SETTINGSシート新規作成時にデフォルト値を書き込む
+  if (sheetName === 'SETTINGS') {
+    const rows = Object.entries(DEFAULT_SETTINGS).map(function(entry) {
+      return [entry[0], entry[1]];
+    });
+    if (rows.length > 0) {
+      sheet.getRange(2, 1, rows.length, 2).setValues(rows);
+      Logger.log('デフォルト設定を書き込みました（' + rows.length + '件）');
+    }
+  }
 }
 
 // ==================== 設定読込 ====================
