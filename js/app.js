@@ -881,6 +881,7 @@ function formatDatetime(date) {
 
 function escapeHtml(str) {
   if (!str) return '';
+  str = String(str);
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
