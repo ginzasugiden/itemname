@@ -233,6 +233,7 @@ function handleLogin_(postData) {
   const context = {
     userId: userId,
     sid: String(authResult.user.sid || ''),
+    role: authResult.user.role || 'user',
     credentials: {
       serviceSecret: authResult.user.serviceSecret || '',
       licenseKey: authResult.user.licenseKey || '',
