@@ -211,7 +211,16 @@
           <div class="card">
             <div class="card-header">
               <h2 class="card-title">📅 イベントスケジュール</h2>
-              <button class="btn-secondary btn-sm" onclick="loadEvents()">🔄 更新</button>
+              <div class="header-actions">
+                <button class="btn-secondary btn-sm" onclick="loadEvents()">🔄 更新</button>
+                <button class="btn-secondary btn-sm admin-only" onclick="generateEvents()" id="generateEventsBtn">
+                  <span class="btn-text">📅 イベント自動生成（2ヶ月分）</span>
+                  <span class="btn-loading" style="display: none;">
+                    <span class="spinner"></span> 生成中...
+                  </span>
+                </button>
+                <button class="btn-primary btn-sm admin-only" onclick="showAddMarathonModal()">➕ マラソン追加</button>
+              </div>
             </div>
             <div class="table-container">
               <table class="data-table" id="eventsTable">
@@ -222,10 +231,11 @@
                     <th>開始日時</th>
                     <th>終了日時</th>
                     <th>状態</th>
+                    <th class="admin-only">操作</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr><td colspan="5" class="loading">読み込み中...</td></tr>
+                  <tr><td colspan="6" class="loading">読み込み中...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -330,6 +340,35 @@
       <div class="modal-footer">
         <button class="btn-secondary" onclick="hideDeleteConfirmModal()">キャンセル</button>
         <button class="btn-danger" onclick="confirmDeleteItem()" id="confirmDeleteBtn">削除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== マラソン追加モーダル ========== -->
+  <div class="modal-overlay" id="addMarathonModal" style="display: none;">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3>🏃 マラソンイベント追加</h3>
+        <button class="modal-close" onclick="hideAddMarathonModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="marathonStart">開始日時</label>
+          <input type="datetime-local" id="marathonStart" required>
+        </div>
+        <div class="form-group">
+          <label for="marathonEnd">終了日時</label>
+          <input type="datetime-local" id="marathonEnd" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="hideAddMarathonModal()">キャンセル</button>
+        <button class="btn-primary" onclick="addMarathonEvent()" id="addMarathonBtn">
+          <span class="btn-text">追加</span>
+          <span class="btn-loading" style="display: none;">
+            <span class="spinner"></span> 追加中...
+          </span>
+        </button>
       </div>
     </div>
   </div>

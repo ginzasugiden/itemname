@@ -1149,3 +1149,42 @@ body {
   margin: 0 0 16px 0;
   font-weight: 600;
 }
+
+/* イベント管理: 無効行 */
+.data-table tr.row-disabled {
+  opacity: 0.5;
+}
+
+/* イベント管理: トグルボタン */
+.btn-warning {
+  padding: 4px 10px;
+  background: var(--warning);
+  color: var(--gray-800);
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-warning:hover {
+  background: #d97706;
+  color: var(--white);
+}
+
+.btn-success-sm {
+  padding: 4px 10px;
+  background: var(--success);
+  color: var(--white);
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-success-sm:hover {
+  background: #059669;
+}

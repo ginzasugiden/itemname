@@ -76,6 +76,19 @@ function handleRequest_(e) {
       case 'resetBackups':
         return handleResetBackups_(postData);
 
+      // イベント管理（管理者のみ）
+      case 'generateEvents':
+        return handleGenerateEvents_(postData);
+
+      case 'addMarathonEvent':
+        return handleAddMarathonEvent_(postData);
+
+      case 'deleteEvent':
+        return handleDeleteEvent_(postData);
+
+      case 'toggleEvent':
+        return handleToggleEvent_(postData);
+
       default:
         response.message = '不明なアクション: ' + action;
         return createJsonResponse_(response);
@@ -145,6 +158,7 @@ function refreshUserContext_(userId) {
         const context = {
           userId: userId,
           sid: String(data[i][colIndex['sid']] || ''),
+          role: data[i][colIndex['role']] || 'user',
           credentials: {
             serviceSecret: data[i][colIndex['serviceSecret']] || '',
             licenseKey: data[i][colIndex['licenseKey']] || '',
@@ -168,6 +182,15 @@ function saveUserContext_(userId, context) {
   const cache = CacheService.getScriptCache();
   const sessionKey = 'session_' + userId;
   cache.put(sessionKey, JSON.stringify(context), 21600); // 6時間
+}
+
+/**
+ * 管理者権限チェック
+ * @param {Object} ctx - getUserContext_() の返値
+ * @return {boolean}
+ */
+function isAdminContext_(ctx) {
+  return ctx && ctx.role === 'admin';
 }
 
 // ==================== 認証 ====================
@@ -405,11 +428,12 @@ function handleGetEvents_(postData) {
   }
   
   try {
-    const events = loadEvents();
-    
+    const events = loadAllEvents();
+
     response.success = true;
     response.data = {
       events: events.map(e => ({
+        rowIndex: e.rowIndex,
         eventKey: e.eventKey,
         startDatetime: e.startDatetime.toISOString(),
         endDatetime: e.endDatetime.toISOString(),
@@ -420,7 +444,7 @@ function handleGetEvents_(postData) {
         enabled: e.enabled,
       })),
     };
-    
+
   } catch (e) {
     response.message = 'イベントの取得に失敗しました: ' + e.message;
   }
@@ -751,6 +775,151 @@ function handleBulkAddTargetItems_(postData) {
   } finally {
     // ロックを解放
     lock.releaseLock();
+  }
+
+  return createJsonResponse_(response);
+}
+
+// ==================== イベント管理（管理者のみ） ====================
+
+/**
+ * 定期イベント自動生成（2ヶ月分）
+ */
+function handleGenerateEvents_(postData) {
+  const response = { success: false, message: '', data: null };
+
+  const ctx = getUserContext_(postData);
+  if (!ctx) {
+    response.message = '認証が必要です。再ログインしてください。';
+    return createJsonResponse_(response);
+  }
+
+  if (!isAdminContext_(ctx)) {
+    response.message = '管理者権限が必要です。';
+    return createJsonResponse_(response);
+  }
+
+  try {
+    generateRecurringEvents();
+
+    response.success = true;
+    response.message = 'イベントを自動生成しました（2ヶ月分）';
+
+  } catch (e) {
+    response.message = 'イベント生成に失敗しました: ' + e.message;
+  }
+
+  return createJsonResponse_(response);
+}
+
+/**
+ * マラソンイベント追加
+ */
+function handleAddMarathonEvent_(postData) {
+  const response = { success: false, message: '', data: null };
+
+  const ctx = getUserContext_(postData);
+  if (!ctx) {
+    response.message = '認証が必要です。再ログインしてください。';
+    return createJsonResponse_(response);
+  }
+
+  if (!isAdminContext_(ctx)) {
+    response.message = '管理者権限が必要です。';
+    return createJsonResponse_(response);
+  }
+
+  try {
+    const startDatetime = postData.startDatetime;
+    const endDatetime = postData.endDatetime;
+
+    if (!startDatetime || !endDatetime) {
+      response.message = '開始日時と終了日時を入力してください';
+      return createJsonResponse_(response);
+    }
+
+    addMarathonEvent(startDatetime, endDatetime);
+
+    response.success = true;
+    response.message = 'マラソンイベントを追加しました: ' + startDatetime + ' ～ ' + endDatetime;
+
+  } catch (e) {
+    response.message = 'マラソンイベントの追加に失敗しました: ' + e.message;
+  }
+
+  return createJsonResponse_(response);
+}
+
+/**
+ * イベント削除
+ */
+function handleDeleteEvent_(postData) {
+  const response = { success: false, message: '', data: null };
+
+  const ctx = getUserContext_(postData);
+  if (!ctx) {
+    response.message = '認証が必要です。再ログインしてください。';
+    return createJsonResponse_(response);
+  }
+
+  if (!isAdminContext_(ctx)) {
+    response.message = '管理者権限が必要です。';
+    return createJsonResponse_(response);
+  }
+
+  try {
+    const rowIndex = postData.rowIndex;
+
+    if (!rowIndex || rowIndex < 2) {
+      response.message = '削除対象が指定されていません';
+      return createJsonResponse_(response);
+    }
+
+    deleteEventRow(rowIndex);
+
+    response.success = true;
+    response.message = 'イベントを削除しました';
+
+  } catch (e) {
+    response.message = 'イベントの削除に失敗しました: ' + e.message;
+  }
+
+  return createJsonResponse_(response);
+}
+
+/**
+ * イベント有効/無効切替
+ */
+function handleToggleEvent_(postData) {
+  const response = { success: false, message: '', data: null };
+
+  const ctx = getUserContext_(postData);
+  if (!ctx) {
+    response.message = '認証が必要です。再ログインしてください。';
+    return createJsonResponse_(response);
+  }
+
+  if (!isAdminContext_(ctx)) {
+    response.message = '管理者権限が必要です。';
+    return createJsonResponse_(response);
+  }
+
+  try {
+    const rowIndex = postData.rowIndex;
+
+    if (!rowIndex || rowIndex < 2) {
+      response.message = '対象が指定されていません';
+      return createJsonResponse_(response);
+    }
+
+    const newEnabled = toggleEventRow(rowIndex);
+
+    response.success = true;
+    response.message = newEnabled ? 'イベントを有効にしました' : 'イベントを無効にしました';
+    response.data = { enabled: newEnabled };
+
+  } catch (e) {
+    response.message = 'イベントの切替に失敗しました: ' + e.message;
   }
 
   return createJsonResponse_(response);

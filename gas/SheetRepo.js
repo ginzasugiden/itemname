@@ -313,7 +313,7 @@ function formatDatetime_(date) {
 function addMarathonEvent(startDatetimeStr, endDatetimeStr) {
   const sheet = getOrCreateSheet_(SHEET_NAMES.EVENTS);
   const lastRow = sheet.getLastRow();
-  
+
   const row = [
     'MARATHON',
     startDatetimeStr,
@@ -324,9 +324,77 @@ function addMarathonEvent(startDatetimeStr, endDatetimeStr) {
     '【SALE】',
     true
   ];
-  
+
   sheet.getRange(lastRow + 1, 1, 1, row.length).setValues([row]);
   Logger.log('マラソンイベント追加: ' + startDatetimeStr + ' ～ ' + endDatetimeStr);
+}
+
+/**
+ * EVENTSシートから全イベントを読み込む（disabled含む、行番号付き）
+ * フロントエンド管理画面用
+ */
+function loadAllEvents() {
+  const sheet = getOrCreateSheet_(SHEET_NAMES.EVENTS);
+  const data = sheet.getDataRange().getValues();
+  const events = [];
+
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (!row[0]) continue;
+
+    events.push({
+      rowIndex: i + 1, // 1-indexed sheet row
+      eventKey: row[0],
+      startDatetime: row[1] instanceof Date ? row[1] : new Date(row[1]),
+      endDatetime: row[2] instanceof Date ? row[2] : new Date(row[2]),
+      priority: Number(row[3]) || 99,
+      prefixLong: row[4] || '',
+      prefixMid: row[5] || '',
+      prefixShort: row[6] || '',
+      enabled: row[7] === true || row[7] === 'TRUE',
+    });
+  }
+
+  return events;
+}
+
+/**
+ * EVENTSシートから指定行を削除
+ * @param {number} rowIndex - 1-indexed シート行番号
+ */
+function deleteEventRow(rowIndex) {
+  const sheet = getOrCreateSheet_(SHEET_NAMES.EVENTS);
+  const lastRow = sheet.getLastRow();
+
+  if (rowIndex < 2 || rowIndex > lastRow) {
+    throw new Error('無効な行番号です: ' + rowIndex);
+  }
+
+  sheet.deleteRow(rowIndex);
+  Logger.log('イベント行削除: row ' + rowIndex);
+}
+
+/**
+ * EVENTSシートの指定行のenabledを切り替え
+ * @param {number} rowIndex - 1-indexed シート行番号
+ * @return {boolean} 切り替え後のenabled値
+ */
+function toggleEventRow(rowIndex) {
+  const sheet = getOrCreateSheet_(SHEET_NAMES.EVENTS);
+  const lastRow = sheet.getLastRow();
+
+  if (rowIndex < 2 || rowIndex > lastRow) {
+    throw new Error('無効な行番号です: ' + rowIndex);
+  }
+
+  // enabledは8列目（H列）
+  const cell = sheet.getRange(rowIndex, 8);
+  const current = cell.getValue();
+  const newValue = !(current === true || current === 'TRUE');
+  cell.setValue(newValue);
+
+  Logger.log('イベント enabled 切替: row ' + rowIndex + ' → ' + newValue);
+  return newValue;
 }
 
 

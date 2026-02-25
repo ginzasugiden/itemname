@@ -521,58 +521,190 @@ function hideModalLoading(modalId) {
 // ==================== イベント ====================
 async function loadEvents() {
   const tbody = document.querySelector('#eventsTable tbody');
-  
+  const colSpan = isAdmin() ? 6 : 5;
+
   // ローディング表示
-  tbody.innerHTML = '<tr><td colspan="5" class="loading"><span class="spinner-dark"></span> 読み込み中...</td></tr>';
-  
+  tbody.innerHTML = `<tr><td colspan="${colSpan}" class="loading"><span class="spinner-dark"></span> 読み込み中...</td></tr>`;
+
   const result = await apiRequest('getEvents', { futureOnly: true });
-  
+
   if (result.success && result.data.events.length > 0) {
     const now = new Date();
     let nextEvent = null;
-    
+    const admin = isAdmin();
+
     tbody.innerHTML = result.data.events.map(event => {
       const start = new Date(event.startDatetime);
       const end = new Date(event.endDatetime);
       const isActive = now >= start && now <= end;
       const isPast = now > end;
-      
-      if (!nextEvent && start > now) {
+
+      if (!nextEvent && start > now && event.enabled) {
         nextEvent = event;
       }
-      
+
       let statusBadge = '';
-      if (isActive) {
+      if (!event.enabled) {
+        statusBadge = '<span class="badge badge-gray">無効</span>';
+      } else if (isActive) {
         statusBadge = '<span class="badge badge-active">開催中</span>';
       } else if (isPast) {
         statusBadge = '<span class="badge badge-info">終了</span>';
       } else {
         statusBadge = '<span class="badge badge-success">予定</span>';
       }
-      
+
+      const rowClass = event.enabled ? '' : ' class="row-disabled"';
+
+      let actionsCol = '';
+      if (admin) {
+        const toggleLabel = event.enabled ? 'OFF' : 'ON';
+        const toggleClass = event.enabled ? 'btn-warning' : 'btn-success-sm';
+        actionsCol = `
+          <td class="admin-only">
+            <button class="btn-sm ${toggleClass}" onclick="toggleEvent(${event.rowIndex})" title="${event.enabled ? '無効にする' : '有効にする'}">${toggleLabel}</button>
+            <button class="btn-secondary btn-icon btn-sm" onclick="deleteEvent(${event.rowIndex}, '${escapeHtml(event.eventKey)}')" title="削除">🗑️</button>
+          </td>
+        `;
+      }
+
       return `
-        <tr>
+        <tr${rowClass}>
           <td><strong>${escapeHtml(event.eventKey)}</strong></td>
           <td>${escapeHtml(event.prefixLong)}</td>
           <td>${formatDatetime(start)}</td>
           <td>${formatDatetime(end)}</td>
           <td>${statusBadge}</td>
+          ${actionsCol}
         </tr>
       `;
     }).join('');
-    
+
     // 次回イベント表示
     if (nextEvent) {
       const nextStart = new Date(nextEvent.startDatetime);
-      document.getElementById('nextEvent').textContent = 
+      document.getElementById('nextEvent').textContent =
         `${nextEvent.prefixLong} (${formatDate(nextStart)})`;
     } else {
       document.getElementById('nextEvent').textContent = '-';
     }
-    
+
   } else {
-    tbody.innerHTML = '<tr><td colspan="5" class="loading">イベントがありません</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="${colSpan}" class="loading">イベントがありません</td></tr>`;
     document.getElementById('nextEvent').textContent = '-';
+  }
+
+  // 管理者表示制御を再適用
+  applyRoleVisibility();
+}
+
+// イベント自動生成（2ヶ月分）
+async function generateEvents() {
+  if (!confirm('定期イベントを自動生成します（2ヶ月分）。\n既存のマラソン以外のイベントは再生成されます。\nよろしいですか？')) {
+    return;
+  }
+
+  const btn = document.getElementById('generateEventsBtn');
+  setButtonLoading(btn, true);
+
+  try {
+    const result = await apiRequest('generateEvents');
+
+    if (result.success) {
+      showToast(result.message, 'success');
+      loadEvents();
+    } else {
+      showToast(result.message || 'イベント生成に失敗しました', 'error');
+    }
+
+  } catch (error) {
+    showToast('サーバーとの通信に失敗しました', 'error');
+  } finally {
+    setButtonLoading(btn, false);
+  }
+}
+
+// マラソン追加モーダル
+function showAddMarathonModal() {
+  document.getElementById('marathonStart').value = '';
+  document.getElementById('marathonEnd').value = '';
+  document.getElementById('addMarathonModal').style.display = 'flex';
+}
+
+function hideAddMarathonModal() {
+  document.getElementById('addMarathonModal').style.display = 'none';
+}
+
+// マラソンイベント追加
+async function addMarathonEvent() {
+  const startInput = document.getElementById('marathonStart').value;
+  const endInput = document.getElementById('marathonEnd').value;
+
+  if (!startInput || !endInput) {
+    showToast('開始日時と終了日時を入力してください', 'warning');
+    return;
+  }
+
+  // datetime-local → "YYYY/MM/DD HH:mm:ss" 形式に変換
+  const startDatetime = startInput.replace('T', ' ').replace(/-/g, '/') + ':00';
+  const endDatetime = endInput.replace('T', ' ').replace(/-/g, '/') + ':00';
+
+  const btn = document.getElementById('addMarathonBtn');
+  setButtonLoading(btn, true);
+
+  try {
+    const result = await apiRequest('addMarathonEvent', { startDatetime, endDatetime });
+
+    if (result.success) {
+      showToast(result.message, 'success');
+      hideAddMarathonModal();
+      loadEvents();
+    } else {
+      showToast(result.message || '追加に失敗しました', 'error');
+    }
+
+  } catch (error) {
+    showToast('サーバーとの通信に失敗しました', 'error');
+  } finally {
+    setButtonLoading(btn, false);
+  }
+}
+
+// イベント削除
+async function deleteEvent(rowIndex, eventKey) {
+  if (!confirm(`イベント「${eventKey}」を削除しますか？`)) {
+    return;
+  }
+
+  try {
+    const result = await apiRequest('deleteEvent', { rowIndex });
+
+    if (result.success) {
+      showToast(result.message, 'success');
+      loadEvents();
+    } else {
+      showToast(result.message || '削除に失敗しました', 'error');
+    }
+
+  } catch (error) {
+    showToast('サーバーとの通信に失敗しました', 'error');
+  }
+}
+
+// イベント有効/無効切替
+async function toggleEvent(rowIndex) {
+  try {
+    const result = await apiRequest('toggleEvent', { rowIndex });
+
+    if (result.success) {
+      showToast(result.message, 'success');
+      loadEvents();
+    } else {
+      showToast(result.message || '切替に失敗しました', 'error');
+    }
+
+  } catch (error) {
+    showToast('サーバーとの通信に失敗しました', 'error');
   }
 }
 
