@@ -124,7 +124,21 @@ function saveDefaultSettings(sid) {
 function saveSettings(settings, sid) {
   const sheet = getOrCreateSheet_('SETTINGS', sid);
   const data = sheet.getDataRange().getValues();
-  
+
+  // 行が空（ヘッダーのみ）の場合、デフォルト設定を書き込む
+  if (data.length <= 1) {
+    const rows = Object.entries(DEFAULT_SETTINGS).map(function(entry) {
+      return [entry[0], entry[1]];
+    });
+    if (rows.length > 0) {
+      sheet.getRange(2, 1, rows.length, 2).setValues(rows);
+      Logger.log('設定行が空のためデフォルト設定を書き込みました (sid: ' + (sid || 'legacy') + ')');
+    }
+    // 書き込んだデータを再取得
+    data.length = 0;
+    sheet.getDataRange().getValues().forEach(function(row) { data.push(row); });
+  }
+
   for (let i = 1; i < data.length; i++) {
     const key = data[i][0];
     if (settings.hasOwnProperty(key)) {
