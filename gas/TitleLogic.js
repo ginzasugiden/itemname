@@ -572,15 +572,16 @@ function truncateAtWordBoundary(title, targetLen) {
 // ==================== 手動変更検知 ====================
 
 function detectManualChange(currentTitle, backupTitle) {
-  if (!backupTitle) return false;
-  
+  if (!backupTitle) return { detected: false, similarity: 1.0 };
+
   const strippedCurrent = stripEventPrefixes(currentTitle);
-  
-  if (strippedCurrent === backupTitle) return false;
-  
-  const similarity = calculateSimilarity(strippedCurrent, backupTitle);
-  
-  return similarity < 0.8;
+  const strippedBackup = stripEventPrefixes(backupTitle);
+
+  if (strippedCurrent === strippedBackup) return { detected: false, similarity: 1.0 };
+
+  const similarity = calculateSimilarity(strippedCurrent, strippedBackup);
+
+  return { detected: similarity < 0.8, similarity: similarity };
 }
 
 function calculateSimilarity(str1, str2) {

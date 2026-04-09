@@ -275,30 +275,34 @@ function processSingleItem(targetItem, multiPrefixCandidates, currentEvents, eve
   
   // ベース名を取得
   const baseTitle = stripEventPrefixes(currentTitle);
-  
+
   // バックアップ確認と手動変更検知
   const backup = backups[targetItem.itemManageNumber];
-  if (backup && detectManualChange(currentTitle, backup.originalTitle)) {
-    return {
-      itemManageNumber: targetItem.itemManageNumber,
-      needsUpdate: false,
-      baseTitle: baseTitle,
-      status: LOG_STATUS.MANUAL_CHANGE,
-      log: {
-        timestamp: new Date(),
-        itemManageNumber: targetItem.itemManageNumber,
-        oldTitle: currentTitle,
-        eventKey: eventKeysStr,
-        action: LOG_ACTIONS.SKIP,
-        status: LOG_STATUS.MANUAL_CHANGE,
-        message: '手動変更が検知されたためスキップ',
-      },
-    };
-  }
-  
-  // バックアップ保存（店舗別）
+
   if (!backup) {
+    // 新規商品: バックアップ作成（strip済みベース名を保存）→手動変更検知なしで処理続行
     saveBackup(targetItem.itemManageNumber, baseTitle, sid);
+  } else {
+    // 既存商品: 手動変更検知
+    const detection = detectManualChange(currentTitle, backup.originalTitle);
+    if (detection.detected) {
+      const similarityPct = Math.round(detection.similarity * 100);
+      return {
+        itemManageNumber: targetItem.itemManageNumber,
+        needsUpdate: false,
+        baseTitle: baseTitle,
+        status: LOG_STATUS.MANUAL_CHANGE,
+        log: {
+          timestamp: new Date(),
+          itemManageNumber: targetItem.itemManageNumber,
+          oldTitle: currentTitle,
+          eventKey: eventKeysStr,
+          action: LOG_ACTIONS.SKIP,
+          status: LOG_STATUS.MANUAL_CHANGE,
+          message: '手動変更が検知されたためスキップ（類似度: ' + similarityPct + '%）',
+        },
+      };
+    }
   }
   
   // [ME-1] 複数prefix対応の商品名生成

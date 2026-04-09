@@ -1,0 +1,30 @@
+【改修3: 手動変更検知の誤検知バグ修正】
+
+現状の問題:
+- MTGで報告: 新規登録した商品でも「手動変更検知」でスキップされるものがある
+- 20商品中13件が手動変更検知、残りが変更なし、とバラバラになる
+- 原因の可能性: バックアップが存在しない新規商品で、detectManualChange()が誤判定している
+
+調査と修正:
+
+1. gas/Main.js の processSingleItem() を確認:
+   - バックアップが存在しない場合（backup === null/undefined）は手動変更検知をスキップすべき
+   - 現在のコード: `if (backup && detectManualChange(currentTitle, backup.originalTitle))` 
+   - backupがnullならスキップされるはずだが、getAllBackups()が空でないデータを返していないか確認
+
+2. gas/TitleLogic.js の detectManualChange() を確認:
+   - calculateSimilarity() の実装を確認
+   - 現在の実装は文字単位のマッチングで、商品名にprefixがついている場合に類似度が下がりすぎる可能性
+   - stripEventPrefixes()後のstrippedCurrentとbackupTitleの比較で、
+     prefix除去後に商品名が大きく変わって見える場合がある
+
+3. 修正方針:
+   - バックアップ保存時: stripEventPrefixes()した「ベース名」を保存する
+   - 比較時: 両方をstripEventPrefixes()してから比較する（現在は片方だけ）
+   - 新規商品（バックアップなし）は必ずバックアップ作成→手動変更検知なしで処理
+   - processSingleItem()内でバックアップがない場合、現在のベース名でバックアップを作成してから処理を続行
+
+4. ログメッセージの改善:
+   - 手動変更検知時のログに「類似度: XX%」を含める（デバッグしやすくする）
+
+変更ファイル: gas/Main.js, gas/TitleLogic.js, （必要なら gas/SheetRepo.js）
