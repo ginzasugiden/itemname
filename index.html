@@ -276,10 +276,10 @@
             <div class="manual-run-section">
               <div class="warning-box">
                 <strong>⚠️ 注意</strong>
-                <p>この画面からはDryRun（テスト実行）のみ実行できます。</p>
-                <p>本番実行はGoogle Apps Scriptから直接行ってください。</p>
+                <p>DryRunは実際の更新を行わずテスト実行します。</p>
+                <p class="admin-only" style="color: var(--rakuten-red); font-weight: bold;">管理者は本番実行が可能です。商品名が実際に変更されます。</p>
               </div>
-              
+
               <div class="run-actions">
                 <button class="btn-primary btn-lg" onclick="runDryRun()" id="runDryRunBtn">
                   <span class="btn-text">🔍 DryRun実行（テスト）</span>
@@ -289,6 +289,12 @@
                 </button>
                 <button class="btn-primary btn-lg" onclick="runNextEventTest()" id="runNextEventBtn" style="background-color: #2196F3;">
                   <span class="btn-text">📅 次回イベントでテスト</span>
+                  <span class="btn-loading" style="display: none;">
+                    <span class="spinner"></span> 実行中...
+                  </span>
+                </button>
+                <button class="btn-danger btn-lg admin-only" onclick="runProduction()" id="runProductionBtn">
+                  <span class="btn-text">⚡ 本番実行</span>
                   <span class="btn-loading" style="display: none;">
                     <span class="spinner"></span> 実行中...
                   </span>

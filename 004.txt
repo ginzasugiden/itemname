@@ -1,0 +1,28 @@
+【改修4: UIから本番実行できるようにする】
+
+現状の問題:
+- UIの手動実行タブからはDryRunしか実行できない
+- 本番実行はGASエディタから直接run()を叩く必要がある
+- MTGで「ボタン押下で即座にRMSのデータを変更」したいと要望があった
+
+改修内容:
+
+1. gas/WebApi.js の handleRunManual_ を修正:
+   - 現在はforceDryRun=trueで固定されている
+   - postData.productionRun = true の場合、forceDryRun=falseで実行する
+   - ただし productionRun=true は管理者権限チェック（isAdminContext_）を必須にする
+   - 一般ユーザーはDryRunのみ実行可能のまま
+
+2. index.html の手動実行タブを修正:
+   - 注意文を修正:「この画面からはDryRun（テスト実行）のみ〜」→管理者には本番実行ボタンも表示
+   - 管理者向けに「⚡ 本番実行」ボタンを追加（class="admin-only"で一般ユーザーには非表示）
+   - 本番実行ボタンは赤系の目立つ色で、押下時に確認ダイアログを表示
+   - 確認ダイアログ: 「本番実行すると楽天RMS上の商品名が実際に変更されます。よろしいですか？」
+
+3. js/app.js に runProduction() 関数を追加:
+   - confirm()で確認後、apiRequest('runManual', { productionRun: true }) を送信
+   - 成功時にログタブを更新
+
+4. 既存の「DryRun実行」「次回イベントでテスト」ボタンはそのまま維持
+
+変更ファイル: gas/WebApi.js, index.html, js/app.js

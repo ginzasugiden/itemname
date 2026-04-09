@@ -526,14 +526,27 @@ function handleRunManual_(postData) {
   
   try {
     const useNextEvent = postData.useNextEvent === true;
-    // [MT-3] 店舗指定でDryRun実行
-    runForStore(ctx.sid, ctx.credentials, true, useNextEvent);
+    const productionRun = postData.productionRun === true;
 
-    response.success = true;
-    response.message = useNextEvent
-      ? '次回イベントでのDryRun実行が完了しました。ログを確認してください。'
-      : 'DryRun実行が完了しました。ログを確認してください。';
-    
+    // 本番実行は管理者権限が必要
+    if (productionRun && !isAdminContext_(ctx)) {
+      response.message = '本番実行には管理者権限が必要です。';
+      return createJsonResponse_(response);
+    }
+
+    const forceDryRun = !productionRun;
+    runForStore(ctx.sid, ctx.credentials, forceDryRun, useNextEvent);
+
+    if (productionRun) {
+      response.success = true;
+      response.message = '本番実行が完了しました。ログを確認してください。';
+    } else {
+      response.success = true;
+      response.message = useNextEvent
+        ? '次回イベントでのDryRun実行が完了しました。ログを確認してください。'
+        : 'DryRun実行が完了しました。ログを確認してください。';
+    }
+
   } catch (e) {
     response.message = '実行に失敗しました: ' + e.message;
   }
