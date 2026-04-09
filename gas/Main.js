@@ -505,6 +505,103 @@ function removeEventGenerationTrigger() {
   Logger.log('イベント生成トリガーを削除しました: ' + removed + '件');
 }
 
+// ==================== 予約復元（毎時チェック） ====================
+
+/**
+ * 毎時実行: restoreDatetime <= now && status === APPLIED の予約を復元
+ * トリガーで checkAndRestoreScheduled を毎時実行する
+ */
+function checkAndRestoreScheduled() {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) {
+    Logger.log('復元チェック: 別プロセス実行中のためスキップ');
+    return;
+  }
+
+  try {
+    const now = new Date();
+    Logger.log('=== 予約復元チェック開始: ' + now.toISOString() + ' ===');
+
+    const stores = getAllActiveStores();
+    for (var s = 0; s < stores.length; s++) {
+      var store = stores[s];
+      var reservations = getRestoreReservations(store.sid);
+
+      for (var r = 0; r < reservations.length; r++) {
+        var reservation = reservations[r];
+        if (reservation.status !== RESTORE_STATUS.APPLIED) continue;
+
+        var restoreTime = new Date(reservation.restoreDatetime);
+        if (restoreTime > now) continue;
+
+        // 復元実行
+        Logger.log('復元開始: ' + reservation.id + ' (sid: ' + store.sid + ')');
+
+        var credentials = {
+          serviceSecret: store.serviceSecret,
+          licenseKey: store.licenseKey,
+        };
+
+        var items = reservation.items;
+        var restoreQueue = items.map(function(item) {
+          return { manageNumber: item.itemManageNumber, newTitle: item.originalTitle };
+        });
+
+        var results = updateItemTitlesBatch(restoreQueue, credentials);
+        var successCount = results.results.filter(function(r) { return r.success; }).length;
+        var failCount = results.results.length - successCount;
+
+        // ステータス更新
+        updateRestoreStatus(reservation.id, RESTORE_STATUS.RESTORED, store.sid);
+
+        // ログ記録
+        var logsToWrite = items.map(function(item) {
+          return {
+            timestamp: new Date(),
+            itemManageNumber: item.itemManageNumber,
+            oldTitle: item.newTitle,
+            newTitle: item.originalTitle,
+            eventKey: '',
+            action: LOG_ACTIONS.REMOVE,
+            status: LOG_STATUS.SUCCESS,
+            message: '予約復元（予約: ' + reservation.id + '）',
+          };
+        });
+        writeLogs(logsToWrite, store.sid);
+
+        Logger.log('復元完了: ' + reservation.id + ' (成功: ' + successCount + ', 失敗: ' + failCount + ')');
+      }
+    }
+
+    Logger.log('=== 予約復元チェック完了 ===');
+  } catch (e) {
+    Logger.log('予約復元エラー: ' + e.message);
+    Logger.log(e.stack);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * 毎時復元チェックトリガーを設定
+ */
+function setupRestoreCheckTrigger() {
+  // 既存の復元チェックトリガーを削除
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'checkAndRestoreScheduled') {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+
+  ScriptApp.newTrigger('checkAndRestoreScheduled')
+    .timeBased()
+    .everyHours(1)
+    .create();
+
+  Logger.log('毎時復元チェックトリガーを設定しました');
+}
+
 // ==================== 初期化・テスト ====================
 
 function setup(sid) {

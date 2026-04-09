@@ -933,6 +933,117 @@ async function runProduction() {
   }
 }
 
+// ==================== 予約実行 ====================
+async function applyNow() {
+  const prefixText = document.getElementById('reservePrefixText').value.trim();
+  const restoreDatetime = document.getElementById('reserveRestoreDatetime').value;
+
+  if (!prefixText) {
+    showToast('prefix文言を入力してください', 'error');
+    return;
+  }
+  if (!restoreDatetime) {
+    showToast('復元日時を指定してください', 'error');
+    return;
+  }
+
+  if (!confirm('即時適用すると楽天RMS上の商品名が実際に変更されます。\n復元予定: ' + restoreDatetime + '\nよろしいですか？')) {
+    return;
+  }
+
+  const btn = document.getElementById('applyNowBtn');
+  const resultDiv = document.getElementById('applyNowResult');
+  const resultMsg = document.getElementById('applyNowResultMessage');
+
+  setButtonLoading(btn, true);
+  resultDiv.style.display = 'none';
+
+  try {
+    const result = await apiRequest('applyNow', {
+      prefixText: prefixText,
+      restoreDatetime: restoreDatetime,
+    });
+
+    resultDiv.style.display = 'block';
+    resultDiv.className = 'run-result ' + (result.success ? 'success' : 'error');
+    resultMsg.textContent = result.message;
+
+    if (result.success) {
+      showToast('即時適用が完了しました', 'success');
+      loadReservations();
+    } else {
+      showToast(result.message || '実行に失敗しました', 'error');
+    }
+  } catch (error) {
+    resultDiv.style.display = 'block';
+    resultDiv.className = 'run-result error';
+    resultMsg.textContent = 'サーバーとの通信に失敗しました';
+    showToast('実行に失敗しました', 'error');
+  } finally {
+    setButtonLoading(btn, false);
+  }
+}
+
+async function loadReservations() {
+  const tbody = document.querySelector('#reservationsTable tbody');
+  tbody.innerHTML = '<tr><td colspan="6" class="loading"><span class="spinner-dark"></span> 読み込み中...</td></tr>';
+
+  const result = await apiRequest('getReservations');
+
+  if (result.success && result.data.reservations.length > 0) {
+    tbody.innerHTML = result.data.reservations.map(r => {
+      let statusBadge = '';
+      switch (r.status) {
+        case 'APPLIED':
+          statusBadge = '<span class="badge badge-info">適用中</span>';
+          break;
+        case 'RESTORED':
+          statusBadge = '<span class="badge badge-success">復元済</span>';
+          break;
+        case 'CANCELLED':
+          statusBadge = '<span class="badge badge-warning">キャンセル</span>';
+          break;
+        default:
+          statusBadge = `<span class="badge">${escapeHtml(r.status)}</span>`;
+      }
+
+      const restoreDate = r.restoreDatetime ? formatDatetime(new Date(r.restoreDatetime)) : '-';
+      const canCancel = r.status === 'APPLIED';
+
+      return `
+        <tr>
+          <td>${escapeHtml(r.id)}</td>
+          <td>${escapeHtml(r.prefixText)}</td>
+          <td>${restoreDate}</td>
+          <td>${statusBadge}</td>
+          <td>${r.items ? r.items.length : 0}</td>
+          <td>${canCancel ? `<button class="btn-danger btn-sm" onclick="cancelReservation('${escapeHtml(r.id)}')">キャンセル</button>` : '-'}</td>
+        </tr>
+      `;
+    }).join('');
+  } else {
+    tbody.innerHTML = '<tr><td colspan="6" class="loading">予約がありません</td></tr>';
+  }
+}
+
+async function cancelReservation(reservationId) {
+  if (!confirm('この予約をキャンセルし、商品名を元に戻しますか？')) {
+    return;
+  }
+
+  try {
+    const result = await apiRequest('cancelReservation', { reservationId: reservationId });
+    if (result.success) {
+      showToast('予約をキャンセルしました', 'success');
+      loadReservations();
+    } else {
+      showToast(result.message || 'キャンセルに失敗しました', 'error');
+    }
+  } catch (error) {
+    showToast('サーバーとの通信に失敗しました', 'error');
+  }
+}
+
 // ==================== タブ制御 ====================
 function setupTabs() {
   const tabBtns = document.querySelectorAll('.tab-btn');
@@ -961,6 +1072,8 @@ function setupTabs() {
         loadTargetItems();
       } else if (tabId === 'events') {
         loadEvents();
+      } else if (tabId === 'reserve') {
+        loadReservations();
       }
     });
   });

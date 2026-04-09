@@ -54,6 +54,7 @@ function initializeSheet_(sheet, sheetName) {
     'TARGET_ITEMS': ['itemManageNumber', 'baseTitle', 'currentTitle', 'lastUpdated', 'status'],
     'LOG': ['timestamp', 'itemManageNumber', 'oldTitle', 'newTitle', 'eventKey', 'action', 'status', 'message'],
     'BACKUP': ['itemManageNumber', 'originalTitle', 'createdAt', 'lastVerified'],
+    'RESTORE': ['id', 'status', 'prefixText', 'restoreDatetime', 'createdAt', 'itemManageNumber', 'originalTitle', 'newTitle'],
   };
   
   if (headers[sheetName]) {
@@ -639,6 +640,105 @@ function cleanOldLogs(retentionDays, sid) {
   }
   
   return rowsToDelete.length;
+}
+
+// ==================== 予約実行（RESTORE） ====================
+
+/**
+ * 予約レコードを書き込み（ヘッダー行を共有し、商品ごとに1行）
+ * @param {string} reservationId - 予約ID
+ * @param {string} prefixText - 適用prefix
+ * @param {Date} restoreDatetime - 復元予定日時
+ * @param {Array} items - [{itemManageNumber, originalTitle, newTitle}]
+ * @param {string} status - ステータス
+ * @param {string} sid - 店舗ID
+ */
+function writeRestoreReservation(reservationId, prefixText, restoreDatetime, items, status, sid) {
+  const sheet = getOrCreateSheet_('RESTORE', sid);
+  const now = new Date();
+  const rows = items.map(function(item) {
+    return [
+      reservationId,
+      status,
+      prefixText,
+      restoreDatetime,
+      now,
+      item.itemManageNumber,
+      item.originalTitle,
+      item.newTitle,
+    ];
+  });
+  const lastRow = sheet.getLastRow();
+  sheet.getRange(lastRow + 1, 1, rows.length, 8).setValues(rows);
+}
+
+/**
+ * 予約一覧を取得（予約IDごとにグルーピング）
+ */
+function getRestoreReservations(sid) {
+  const sheet = getOrCreateSheet_('RESTORE', sid);
+  const data = sheet.getDataRange().getValues();
+  var reservations = {};
+
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var id = row[0];
+    if (!id) continue;
+
+    if (!reservations[id]) {
+      reservations[id] = {
+        id: id,
+        status: row[1] || '',
+        prefixText: row[2] || '',
+        restoreDatetime: row[3] instanceof Date ? row[3].toISOString() : row[3],
+        createdAt: row[4] instanceof Date ? row[4].toISOString() : row[4],
+        items: [],
+      };
+    }
+    reservations[id].items.push({
+      rowIndex: i + 1,
+      itemManageNumber: row[5] || '',
+      originalTitle: row[6] || '',
+      newTitle: row[7] || '',
+    });
+  }
+
+  // 新しい順で配列化
+  return Object.values(reservations).sort(function(a, b) {
+    return new Date(b.createdAt) - new Date(a.createdAt);
+  });
+}
+
+/**
+ * 予約のステータスを更新
+ */
+function updateRestoreStatus(reservationId, newStatus, sid) {
+  var sheet = getOrCreateSheet_('RESTORE', sid);
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === reservationId) {
+      sheet.getRange(i + 1, 2).setValue(newStatus);
+    }
+  }
+}
+
+/**
+ * 指定予約IDの商品情報を取得
+ */
+function getRestoreItems(reservationId, sid) {
+  var sheet = getOrCreateSheet_('RESTORE', sid);
+  var data = sheet.getDataRange().getValues();
+  var items = [];
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === reservationId) {
+      items.push({
+        itemManageNumber: data[i][5] || '',
+        originalTitle: data[i][6] || '',
+        newTitle: data[i][7] || '',
+      });
+    }
+  }
+  return items;
 }
 
 // ==================== 初期化 ====================

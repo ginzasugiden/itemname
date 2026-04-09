@@ -1,0 +1,81 @@
+【改修5: 即時実行＋自動復元（予約）機能】
+
+MTGでの要望:
+- ボタンを押したら即座にRMS上の商品名が変更される
+- 指定した日時に自動で元の商品名に戻る
+- 土日にマラソン開始で変更したいが、手動で操作できない場合がある
+
+設計方針:
+- 既存のイベント連動処理（run()）とは独立した「即時変更＋復元予約」機能を追加
+- 復元はGASのtime-basedトリガーで実現
+- まずは「同時に1予約のみ」のシンプルな実装（複数予約の競合は将来対応）
+
+実装内容:
+
+### 1. 新しいシート: R_{sid}（RESTORE予約シート）
+gas/Constants.js:
+- SHEET_PREFIX に RESTORE: 'R' を追加
+- SHEET_NAMES に RESTORE: 'RESTORE' を追加
+
+gas/SheetRepo.js:
+- initializeSheet_ に RESTORE のヘッダー追加:
+  [id, status, prefixText, restoreDatetime, createdAt, itemManageNumber, originalTitle, newTitle]
+  - id: 予約ID（タイムスタンプベース）
+  - status: PENDING / APPLIED / RESTORED / CANCELLED
+  - prefixText: 適用するprefix文言（例: 「【ポイント10倍】」）
+  - restoreDatetime: 復元予定日時
+  - createdAt: 作成日時
+  - 以降は商品ごとの行: itemManageNumber, originalTitle, newTitle
+
+### 2. GAS バックエンド
+gas/WebApi.js に3つのアクションを追加:
+
+a) handleApplyNow_(postData):
+   - postData: { prefixText, restoreDatetime }
+   - 処理:
+     1. 対象商品リスト（T_{sid}）を取得
+     2. 各商品の現在の商品名をAPIから取得（originalTitle）
+     3. prefixTextを先頭に付与した商品名を生成（127文字制限考慮）
+     4. 楽天APIでPATCH更新（本番実行）
+     5. R_{sid}シートに予約レコードを書き込み（status=APPLIED）
+     6. 復元用トリガーを設定（restoreDatetimeに restoreScheduled_{sid} を実行）
+   - レスポンス: 成功件数、失敗件数
+
+b) handleGetReservations_(postData):
+   - R_{sid}シートから予約一覧を取得して返す
+
+c) handleCancelReservation_(postData):
+   - 指定した予約をキャンセル（status=CANCELLED）
+   - 即座に商品名を復元（originalTitleに戻す）
+   - トリガーを削除
+
+gas/Main.js に復元関数を追加:
+
+restoreScheduled(reservationId, sid):
+   - R_{sid}シートから該当予約を取得
+   - 各商品のoriginalTitleで楽天APIを叩いて復元
+   - status を RESTORED に更新
+   - ログに記録
+
+### 3. フロントエンド
+index.html:
+- 手動実行タブの下部、または新しいタブ「⏰ 予約実行」を追加
+- 入力フォーム:
+  - prefix文言（テキスト入力、例: 【ポイント10倍】）
+  - 復元日時（datetime-local）
+  - 「即時適用＋復元予約」ボタン
+- 予約一覧テーブル:
+  - 予約ID、prefix、復元予定日時、ステータス、操作（キャンセル）
+
+js/app.js:
+- applyNow() 関数: confirm後にAPIリクエスト
+- loadReservations() 関数: 予約一覧を取得・表示
+- cancelReservation() 関数: 予約キャンセル
+
+### 4. トリガー管理
+- 復元トリガーはScriptApp.newTrigger()のtime-basedで設定
+- トリガー関数名: restoreByTrigger_{reservationId} は動的に作れないので、
+  代わりに checkAndRestoreScheduled() を毎時実行し、R_{sid}シートの
+  restoreDatetime <= now && status === 'APPLIED' のレコードを復元する方式にする
+
+変更ファイル: gas/Constants.js, gas/SheetRepo.js, gas/WebApi.js, gas/Main.js, gas/TitleLogic.js, index.html, js/app.js, css/style.css

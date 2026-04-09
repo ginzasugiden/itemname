@@ -102,6 +102,7 @@
         <button class="tab-btn" data-tab="events">📅 イベント</button>
         <button class="tab-btn" data-tab="logs">📋 ログ</button>
         <button class="tab-btn" data-tab="manual">▶️ 手動実行</button>
+        <button class="tab-btn admin-only" data-tab="reserve">⏰ 予約実行</button>
       </nav>
 
       <!-- タブコンテンツ -->
@@ -305,6 +306,68 @@
                 <h4>実行結果</h4>
                 <p id="runResultMessage"></p>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 予約実行タブ -->
+        <div class="tab-content" id="tab-reserve">
+          <div class="card">
+            <h2 class="card-title">⏰ 即時適用＋復元予約</h2>
+            <div class="manual-run-section">
+              <div class="warning-box">
+                <strong>⚠️ 注意</strong>
+                <p>即時適用すると楽天RMS上の商品名が実際に変更されます。指定日時に自動で元の商品名に復元されます。</p>
+              </div>
+
+              <div class="settings-grid">
+                <div class="form-group">
+                  <label for="reservePrefixText">Prefix文言</label>
+                  <input type="text" id="reservePrefixText" placeholder="例: 【ポイント10倍】" />
+                </div>
+                <div class="form-group">
+                  <label for="reserveRestoreDatetime">復元日時</label>
+                  <input type="datetime-local" id="reserveRestoreDatetime" />
+                </div>
+              </div>
+
+              <div class="run-actions" style="margin-top: 16px;">
+                <button class="btn-danger btn-lg" onclick="applyNow()" id="applyNowBtn">
+                  <span class="btn-text">⚡ 即時適用＋復元予約</span>
+                  <span class="btn-loading" style="display: none;">
+                    <span class="spinner"></span> 実行中...
+                  </span>
+                </button>
+              </div>
+
+              <div class="run-result" id="applyNowResult" style="display: none;">
+                <h4>実行結果</h4>
+                <p id="applyNowResultMessage"></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top: 16px;">
+            <div class="card-header">
+              <h2 class="card-title">📋 予約一覧</h2>
+              <button class="btn-secondary btn-sm" onclick="loadReservations()">🔄 更新</button>
+            </div>
+            <div class="table-container">
+              <table class="data-table" id="reservationsTable">
+                <thead>
+                  <tr>
+                    <th>予約ID</th>
+                    <th>Prefix</th>
+                    <th>復元予定日時</th>
+                    <th>ステータス</th>
+                    <th>商品数</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td colspan="6" class="loading">読み込み中...</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

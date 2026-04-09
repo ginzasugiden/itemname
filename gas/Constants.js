@@ -30,6 +30,7 @@ const SHEET_NAMES = {
   TARGET_ITEMS: 'TARGET_ITEMS',
   LOG: 'LOG',
   BACKUP: 'BACKUP',
+  RESTORE: 'RESTORE',
 };
 
 // ==================== [MT-1] マルチテナント用シートプレフィックス ====================
@@ -43,6 +44,7 @@ const SHEET_PREFIX = {
   TARGET_ITEMS: 'T',
   LOG: 'L',
   BACKUP: 'B',
+  RESTORE: 'R',
 };
 
 /**
@@ -208,4 +210,12 @@ const LOG_STATUS = {
   DRY_RUN: 'DRY_RUN',
   SKIPPED: 'SKIPPED',
   MANUAL_CHANGE: 'MANUAL_CHANGE',
+};
+
+// ==================== 予約ステータス ====================
+const RESTORE_STATUS = {
+  PENDING: 'PENDING',
+  APPLIED: 'APPLIED',
+  RESTORED: 'RESTORED',
+  CANCELLED: 'CANCELLED',
 };

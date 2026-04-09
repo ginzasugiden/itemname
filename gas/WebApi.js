@@ -92,6 +92,16 @@ function handleRequest_(e) {
       case 'toggleEvent':
         return handleToggleEvent_(postData);
 
+      // 予約実行
+      case 'applyNow':
+        return handleApplyNow_(postData);
+
+      case 'getReservations':
+        return handleGetReservations_(postData);
+
+      case 'cancelReservation':
+        return handleCancelReservation_(postData);
+
       default:
         response.message = '不明なアクション: ' + action;
         return createJsonResponse_(response);
@@ -1025,6 +1035,217 @@ function handleResetBackups_(postData) {
 
   } catch (e) {
     response.message = 'バックアップのリセットに失敗しました: ' + e.message;
+  }
+
+  return createJsonResponse_(response);
+}
+
+// ==================== 予約実行（即時適用＋復元予約） ====================
+
+/**
+ * 即時適用＋復元予約
+ * postData: { prefixText, restoreDatetime }
+ */
+function handleApplyNow_(postData) {
+  const response = { success: false, message: '', data: null };
+
+  const ctx = getUserContext_(postData);
+  if (!ctx) {
+    response.message = '認証が必要です。再ログインしてください。';
+    return createJsonResponse_(response);
+  }
+
+  if (!isAdminContext_(ctx)) {
+    response.message = '管理者権限が必要です。';
+    return createJsonResponse_(response);
+  }
+
+  try {
+    const prefixText = postData.prefixText;
+    const restoreDatetimeStr = postData.restoreDatetime;
+
+    if (!prefixText) {
+      response.message = 'prefix文言を入力してください。';
+      return createJsonResponse_(response);
+    }
+    if (!restoreDatetimeStr) {
+      response.message = '復元日時を指定してください。';
+      return createJsonResponse_(response);
+    }
+
+    const restoreDatetime = new Date(restoreDatetimeStr);
+    if (isNaN(restoreDatetime.getTime()) || restoreDatetime <= new Date()) {
+      response.message = '復元日時は未来の日時を指定してください。';
+      return createJsonResponse_(response);
+    }
+
+    // 対象商品を取得
+    const targetItems = loadTargetItems(ctx.sid);
+    if (targetItems.length === 0) {
+      response.message = '対象商品が登録されていません。';
+      return createJsonResponse_(response);
+    }
+
+    const reservationId = 'RSV_' + Date.now();
+    const maxLen = 127; // 全角換算上限
+    const updateQueue = [];
+    const restoreItems = [];
+    var successCount = 0;
+    var failCount = 0;
+
+    // 各商品の現在の商品名を取得してprefix付与
+    for (var i = 0; i < targetItems.length; i++) {
+      var item = targetItems[i];
+      var itemResult = getItem(item.itemManageNumber, ctx.credentials);
+      if (!itemResult.success) {
+        failCount++;
+        continue;
+      }
+
+      var currentTitle = itemResult.item.title || '';
+      // prefix付きの商品名を生成（文字数制限考慮）
+      var newTitle = prefixText + stripEventPrefixes(currentTitle);
+      if (calcZenkakuLength(newTitle) > maxLen) {
+        newTitle = truncateToZenkakuLimit(newTitle, maxLen);
+      }
+
+      updateQueue.push({ manageNumber: item.itemManageNumber, newTitle: newTitle });
+      restoreItems.push({
+        itemManageNumber: item.itemManageNumber,
+        originalTitle: currentTitle,
+        newTitle: newTitle,
+      });
+
+      Utilities.sleep(500);
+    }
+
+    // 楽天APIで一括更新
+    if (updateQueue.length > 0) {
+      var updateResults = updateItemTitlesBatch(updateQueue, ctx.credentials);
+      for (var j = 0; j < updateResults.results.length; j++) {
+        if (updateResults.results[j].success) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      }
+    }
+
+    // RESTOREシートに書き込み
+    writeRestoreReservation(reservationId, prefixText, restoreDatetime, restoreItems, RESTORE_STATUS.APPLIED, ctx.sid);
+
+    // ログに記録
+    var logsToWrite = restoreItems.map(function(ri) {
+      return {
+        timestamp: new Date(),
+        itemManageNumber: ri.itemManageNumber,
+        oldTitle: ri.originalTitle,
+        newTitle: ri.newTitle,
+        eventKey: '',
+        action: LOG_ACTIONS.INSERT,
+        status: LOG_STATUS.SUCCESS,
+        message: '即時適用（予約: ' + reservationId + '）prefix: ' + prefixText,
+      };
+    });
+    writeLogs(logsToWrite, ctx.sid);
+
+    response.success = true;
+    response.message = '即時適用完了（成功: ' + successCount + '件、失敗: ' + failCount + '件）。復元予約: ' + restoreDatetimeStr;
+    response.data = { reservationId: reservationId, successCount: successCount, failCount: failCount };
+
+  } catch (e) {
+    response.message = '即時適用に失敗しました: ' + e.message;
+  }
+
+  return createJsonResponse_(response);
+}
+
+/**
+ * 予約一覧取得
+ */
+function handleGetReservations_(postData) {
+  const response = { success: false, message: '', data: null };
+
+  const ctx = getUserContext_(postData);
+  if (!ctx) {
+    response.message = '認証が必要です。再ログインしてください。';
+    return createJsonResponse_(response);
+  }
+
+  try {
+    const reservations = getRestoreReservations(ctx.sid);
+    response.success = true;
+    response.data = { reservations: reservations };
+  } catch (e) {
+    response.message = '予約一覧の取得に失敗しました: ' + e.message;
+  }
+
+  return createJsonResponse_(response);
+}
+
+/**
+ * 予約キャンセル（即座に商品名を復元）
+ */
+function handleCancelReservation_(postData) {
+  const response = { success: false, message: '', data: null };
+
+  const ctx = getUserContext_(postData);
+  if (!ctx) {
+    response.message = '認証が必要です。再ログインしてください。';
+    return createJsonResponse_(response);
+  }
+
+  if (!isAdminContext_(ctx)) {
+    response.message = '管理者権限が必要です。';
+    return createJsonResponse_(response);
+  }
+
+  try {
+    const reservationId = postData.reservationId;
+    if (!reservationId) {
+      response.message = '予約IDが指定されていません。';
+      return createJsonResponse_(response);
+    }
+
+    // 予約の商品情報を取得
+    const items = getRestoreItems(reservationId, ctx.sid);
+    if (items.length === 0) {
+      response.message = '予約が見つかりません。';
+      return createJsonResponse_(response);
+    }
+
+    // 商品名を復元
+    var restoreQueue = items.map(function(item) {
+      return { manageNumber: item.itemManageNumber, newTitle: item.originalTitle };
+    });
+    var restoreResults = updateItemTitlesBatch(restoreQueue, ctx.credentials);
+
+    var successCount = restoreResults.results.filter(function(r) { return r.success; }).length;
+    var failCount = restoreResults.results.length - successCount;
+
+    // ステータスをCANCELLEDに更新
+    updateRestoreStatus(reservationId, RESTORE_STATUS.CANCELLED, ctx.sid);
+
+    // ログに記録
+    var logsToWrite = items.map(function(item) {
+      return {
+        timestamp: new Date(),
+        itemManageNumber: item.itemManageNumber,
+        oldTitle: item.newTitle,
+        newTitle: item.originalTitle,
+        eventKey: '',
+        action: LOG_ACTIONS.REMOVE,
+        status: LOG_STATUS.SUCCESS,
+        message: '予約キャンセル・復元（予約: ' + reservationId + '）',
+      };
+    });
+    writeLogs(logsToWrite, ctx.sid);
+
+    response.success = true;
+    response.message = '予約をキャンセルし商品名を復元しました（成功: ' + successCount + '件、失敗: ' + failCount + '件）';
+
+  } catch (e) {
+    response.message = '予約キャンセルに失敗しました: ' + e.message;
   }
 
   return createJsonResponse_(response);
