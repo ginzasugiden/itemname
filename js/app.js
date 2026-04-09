@@ -860,6 +860,38 @@ async function runDryRun() {
   }
 }
 
+async function runNextEventTest() {
+  const btn = document.getElementById('runNextEventBtn');
+  const resultDiv = document.getElementById('runResult');
+  const resultMsg = document.getElementById('runResultMessage');
+
+  setButtonLoading(btn, true);
+  resultDiv.style.display = 'none';
+
+  try {
+    const result = await apiRequest('runManual', { useNextEvent: true });
+
+    resultDiv.style.display = 'block';
+    resultDiv.className = 'run-result ' + (result.success ? 'success' : 'error');
+    resultMsg.textContent = result.message;
+
+    if (result.success) {
+      showToast('次回イベントでのテスト実行が完了しました', 'success');
+      loadLogs();
+    } else {
+      showToast(result.message || '実行に失敗しました', 'error');
+    }
+
+  } catch (error) {
+    resultDiv.style.display = 'block';
+    resultDiv.className = 'run-result error';
+    resultMsg.textContent = 'サーバーとの通信に失敗しました';
+    showToast('実行に失敗しました', 'error');
+  } finally {
+    setButtonLoading(btn, false);
+  }
+}
+
 // ==================== タブ制御 ====================
 function setupTabs() {
   const tabBtns = document.querySelectorAll('.tab-btn');

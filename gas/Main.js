@@ -85,20 +85,22 @@ function run() {
  * @param {Object} credentials - { serviceSecret, licenseKey }
  * @param {boolean} forceDryRun - true=強制DryRun（Web手動実行時）
  */
-function runForStore(sid, credentials, forceDryRun) {
+function runForStore(sid, credentials, forceDryRun, useNextEvent) {
   const startTime = new Date();
-  
+
   // 設定読込（店舗別）
   const settings = loadSettings(sid);
   if (forceDryRun) settings.dryRun = true;
-  
+
   Logger.log('モード: ' + settings.mode);
   Logger.log('dryRun: ' + settings.dryRun);
-  
+
   // [ME-1] イベント読込と判定（複数イベント取得）
   const events = loadEvents();
   const now = new Date();
-  const currentEvents = getCurrentEvents(now, events, settings);
+  const currentEvents = useNextEvent
+    ? getNextEvents(now, events, settings)
+    : getCurrentEvents(now, events, settings);
   
   if (currentEvents.length > 0) {
     Logger.log('適用イベント数: ' + currentEvents.length);

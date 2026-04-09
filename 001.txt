@@ -1,0 +1,16 @@
+【改修1: 日付に関係なくDryRunテストできるようにする】
+
+現状の問題:
+- DryRunもイベント日時を見ているため、イベント期間外に実行すると「適用イベント:なし」で変更なしになる
+- ユーザーは事前に「次のイベントでどう変わるか」をテストしたい
+
+改修内容:
+1. WebApi.js の handleRunManual_ に「次回イベントを適用してテスト」オプションを追加
+   - postData.useNextEvent = true の場合、getCurrentEvents() の代わりに次回イベントを取得して適用
+2. TitleLogic.js に getNextEvents(now, events) 関数を追加
+   - 現在日時より未来の最も近いイベント（開始日時が最も近いもの）を返す
+3. フロントエンド（index.html + app.js）の手動実行タブに「次回イベントでテスト」ボタンを追加
+   - 既存の「DryRun実行」ボタンの横に配置
+   - ボタン押下時に apiRequest('runManual', { useNextEvent: true }) を送信
+
+変更ファイル: gas/WebApi.js, gas/TitleLogic.js, gas/Main.js, index.html, js/app.js

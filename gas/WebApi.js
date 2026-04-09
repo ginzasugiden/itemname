@@ -525,11 +525,14 @@ function handleRunManual_(postData) {
   }
   
   try {
+    const useNextEvent = postData.useNextEvent === true;
     // [MT-3] 店舗指定でDryRun実行
-    runForStore(ctx.sid, ctx.credentials, true);
-    
+    runForStore(ctx.sid, ctx.credentials, true, useNextEvent);
+
     response.success = true;
-    response.message = 'DryRun実行が完了しました。ログを確認してください。';
+    response.message = useNextEvent
+      ? '次回イベントでのDryRun実行が完了しました。ログを確認してください。'
+      : 'DryRun実行が完了しました。ログを確認してください。';
     
   } catch (e) {
     response.message = '実行に失敗しました: ' + e.message;

@@ -36,6 +36,31 @@ function getCurrentEvents(now, events, settings) {
 }
 
 /**
+ * 次回イベントを取得（現在日時より未来の最も近いイベント）
+ * @param {Date} now - 判定日時
+ * @param {Array} events - イベント一覧
+ * @param {Object} settings - 設定
+ * @returns {Array} 次回イベント一覧（同一開始日時のものをすべて含む）
+ */
+function getNextEvents(now, events, settings) {
+  const futureEvents = events.filter(event => event.startDatetime > now);
+  if (futureEvents.length === 0) return [];
+
+  futureEvents.sort((a, b) => a.startDatetime - b.startDatetime);
+  const nearestStart = futureEvents[0].startDatetime.getTime();
+
+  const nextEvents = futureEvents
+    .filter(event => event.startDatetime.getTime() === nearestStart)
+    .sort((a, b) => a.priority - b.priority);
+
+  if (settings.shopMultiplierEnabled) {
+    nextEvents.push(createShopMultiplierEvent(settings.shopMultiplierRate));
+  }
+
+  return nextEvents;
+}
+
+/**
  * [互換性維持] 現在適用中のイベントを1つ取得（旧API）
  * @param {Date} now - 判定日時
  * @param {Array} events - イベント一覧
