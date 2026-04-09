@@ -772,9 +772,9 @@ async function toggleEvent(rowIndex) {
 // ==================== ログ ====================
 async function loadLogs() {
   const tbody = document.querySelector('#logsTable tbody');
-  
+
   // ローディング表示
-  tbody.innerHTML = '<tr><td colspan="5" class="loading"><span class="spinner-dark"></span> 読み込み中...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="6" class="loading"><span class="spinner-dark"></span> 読み込み中...</td></tr>';
   
   const result = await apiRequest('getLogs', { limit: 50 });
   
@@ -810,11 +810,16 @@ async function loadLogs() {
       
       const timestamp = log.timestamp ? formatDatetime(new Date(log.timestamp)) : '-';
       
+      const oldTitle = escapeHtml(log.oldTitle || '-');
+      const newTitle = escapeHtml(log.newTitle || '-');
+      const titleChanged = log.oldTitle && log.newTitle && log.oldTitle !== log.newTitle;
+
       return `
         <tr>
           <td>${timestamp}</td>
           <td>${escapeHtml(log.itemManageNumber || '-')}</td>
-          <td>${escapeHtml(log.action || '-')}</td>
+          <td class="log-title-cell" title="${oldTitle}">${oldTitle}</td>
+          <td class="log-title-cell${titleChanged ? ' title-changed' : ''}" title="${newTitle}">${newTitle}</td>
           <td>${statusBadge}</td>
           <td>${escapeHtml(log.message || '-')}</td>
         </tr>
@@ -822,7 +827,7 @@ async function loadLogs() {
     }).join('');
     
   } else {
-    tbody.innerHTML = '<tr><td colspan="5" class="loading">ログがありません</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="loading">ログがありません</td></tr>';
   }
 }
 

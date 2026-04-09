@@ -576,6 +576,20 @@ body {
   color: var(--gray-600);
 }
 
+.log-title-cell {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--gray-600);
+}
+
+.log-title-cell.title-changed {
+  font-weight: bold;
+  color: var(--gray-800);
+}
+
 /* ステータスバッジ */
 .badge {
   display: inline-block;
