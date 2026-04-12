@@ -400,6 +400,36 @@ function loadAllEvents() {
 }
 
 /**
+ * EVENTSシートの指定行を更新
+ * @param {number} rowIndex - 1-indexed シート行番号
+ * @param {Object} eventData - { eventKey, startDatetime, endDatetime, priority, prefixLong, prefixMid, prefixShort }
+ */
+function updateEventRow(rowIndex, eventData) {
+  const sheet = getOrCreateSheet_(SHEET_NAMES.EVENTS);
+  const lastRow = sheet.getLastRow();
+
+  if (rowIndex < 2 || rowIndex > lastRow) {
+    throw new Error('無効な行番号です: ' + rowIndex);
+  }
+
+  const currentEnabled = sheet.getRange(rowIndex, 8).getValue();
+
+  const row = [
+    eventData.eventKey,
+    eventData.startDatetime,
+    eventData.endDatetime,
+    eventData.priority || 4,
+    eventData.prefixLong || '',
+    eventData.prefixMid || '',
+    eventData.prefixShort || '',
+    currentEnabled
+  ];
+
+  sheet.getRange(rowIndex, 1, 1, row.length).setValues([row]);
+  Logger.log('イベント更新: row ' + rowIndex + ' ' + eventData.eventKey);
+}
+
+/**
  * EVENTSシートから指定行を削除
  * @param {number} rowIndex - 1-indexed シート行番号
  */

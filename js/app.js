@@ -521,7 +521,7 @@ function hideModalLoading(modalId) {
 // ==================== イベント ====================
 async function loadEvents() {
   const tbody = document.querySelector('#eventsTable tbody');
-  const colSpan = isAdmin() ? 6 : 5;
+  const colSpan = isAdmin() ? 9 : 8;
 
   // ローディング表示
   tbody.innerHTML = `<tr><td colspan="${colSpan}" class="loading"><span class="spinner-dark"></span> 読み込み中...</td></tr>`;
@@ -563,6 +563,7 @@ async function loadEvents() {
         actionsCol = `
           <td class="admin-only">
             <button class="btn-sm ${toggleClass}" onclick="toggleEvent(${event.rowIndex})" title="${event.enabled ? '無効にする' : '有効にする'}">${toggleLabel}</button>
+            <button class="btn-secondary btn-icon btn-sm" onclick='showEditEventModal(${JSON.stringify(event).replace(/'/g, "&apos;")})' title="編集">✏️</button>
             <button class="btn-secondary btn-icon btn-sm" onclick="deleteEvent(${event.rowIndex}, '${escapeHtml(event.eventKey)}')" title="削除">🗑️</button>
           </td>
         `;
@@ -572,6 +573,9 @@ async function loadEvents() {
         <tr${rowClass}>
           <td><strong>${escapeHtml(event.eventKey)}</strong></td>
           <td>${escapeHtml(event.prefixLong)}</td>
+          <td>${escapeHtml(event.prefixMid || '')}</td>
+          <td>${escapeHtml(event.prefixShort || '')}</td>
+          <td>${event.priority}</td>
           <td>${formatDatetime(start)}</td>
           <td>${formatDatetime(end)}</td>
           <td>${statusBadge}</td>
@@ -722,6 +726,82 @@ async function addEvent() {
       loadEvents();
     } else {
       showToast(result.message || '追加に失敗しました', 'error');
+    }
+
+  } catch (error) {
+    showToast('サーバーとの通信に失敗しました', 'error');
+  } finally {
+    setButtonLoading(btn, false);
+  }
+}
+
+// イベント編集モーダル
+function showEditEventModal(event) {
+  document.getElementById('editEventRowIndex').value = event.rowIndex;
+  document.getElementById('editEventKey').value = event.eventKey || '';
+  document.getElementById('editPrefixLong').value = event.prefixLong || '';
+  document.getElementById('editPrefixMid').value = event.prefixMid || '';
+  document.getElementById('editPrefixShort').value = event.prefixShort || '';
+  document.getElementById('editEventPriority').value = String(event.priority || 4);
+
+  // ISO → datetime-local (YYYY-MM-DDTHH:mm)
+  const toLocalInput = (dt) => {
+    const d = new Date(dt);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+  document.getElementById('editEventStart').value = toLocalInput(event.startDatetime);
+  document.getElementById('editEventEnd').value = toLocalInput(event.endDatetime);
+
+  document.getElementById('editEventModal').style.display = 'flex';
+}
+
+function hideEditEventModal() {
+  document.getElementById('editEventModal').style.display = 'none';
+}
+
+// イベント更新
+async function updateEvent() {
+  const rowIndex = parseInt(document.getElementById('editEventRowIndex').value, 10);
+  const eventKey = document.getElementById('editEventKey').value.trim();
+  const prefixLong = document.getElementById('editPrefixLong').value.trim();
+  const prefixMid = document.getElementById('editPrefixMid').value.trim();
+  const prefixShort = document.getElementById('editPrefixShort').value.trim();
+  const priority = parseInt(document.getElementById('editEventPriority').value, 10) || 4;
+  const startInput = document.getElementById('editEventStart').value;
+  const endInput = document.getElementById('editEventEnd').value;
+
+  if (!eventKey) {
+    showToast('イベントキーを入力してください', 'warning');
+    return;
+  }
+  if (!prefixLong) {
+    showToast('Prefix（長）を入力してください', 'warning');
+    return;
+  }
+  if (!startInput || !endInput) {
+    showToast('開始日時と終了日時を入力してください', 'warning');
+    return;
+  }
+
+  const startDatetime = startInput.replace('T', ' ').replace(/-/g, '/') + ':00';
+  const endDatetime = endInput.replace('T', ' ').replace(/-/g, '/') + ':00';
+
+  const btn = document.getElementById('updateEventBtn');
+  setButtonLoading(btn, true);
+
+  try {
+    const result = await apiRequest('updateEvent', {
+      rowIndex, eventKey, startDatetime, endDatetime, priority,
+      prefixLong, prefixMid: prefixMid || prefixLong, prefixShort: prefixShort || prefixLong,
+    });
+
+    if (result.success) {
+      showToast(result.message, 'success');
+      hideEditEventModal();
+      loadEvents();
+    } else {
+      showToast(result.message || '更新に失敗しました', 'error');
     }
 
   } catch (error) {

@@ -86,6 +86,9 @@ function handleRequest_(e) {
       case 'addEvent':
         return handleAddEvent_(postData);
 
+      case 'updateEvent':
+        return handleUpdateEvent_(postData);
+
       case 'deleteEvent':
         return handleDeleteEvent_(postData);
 
@@ -931,6 +934,61 @@ function handleAddEvent_(postData) {
 
   } catch (e) {
     response.message = 'イベントの追加に失敗しました: ' + e.message;
+  }
+
+  return createJsonResponse_(response);
+}
+
+/**
+ * イベント更新
+ */
+function handleUpdateEvent_(postData) {
+  const response = { success: false, message: '', data: null };
+
+  const ctx = getUserContext_(postData);
+  if (!ctx) {
+    response.message = '認証が必要です。再ログインしてください。';
+    return createJsonResponse_(response);
+  }
+
+  if (!isAdminContext_(ctx)) {
+    response.message = '管理者権限が必要です。';
+    return createJsonResponse_(response);
+  }
+
+  try {
+    const { rowIndex, eventKey, startDatetime, endDatetime, priority, prefixLong, prefixMid, prefixShort } = postData;
+
+    if (!rowIndex || rowIndex < 2) {
+      response.message = '無効な行番号です';
+      return createJsonResponse_(response);
+    }
+
+    if (!eventKey || !startDatetime || !endDatetime) {
+      response.message = 'イベントキー・開始日時・終了日時は必須です';
+      return createJsonResponse_(response);
+    }
+
+    if (!prefixLong) {
+      response.message = 'Prefix（長）は必須です';
+      return createJsonResponse_(response);
+    }
+
+    updateEventRow(rowIndex, {
+      eventKey: eventKey,
+      startDatetime: startDatetime,
+      endDatetime: endDatetime,
+      priority: priority || 4,
+      prefixLong: prefixLong,
+      prefixMid: prefixMid || prefixLong,
+      prefixShort: prefixShort || prefixLong,
+    });
+
+    response.success = true;
+    response.message = 'イベントを更新しました: ' + eventKey;
+
+  } catch (e) {
+    response.message = 'イベントの更新に失敗しました: ' + e.message;
   }
 
   return createJsonResponse_(response);
