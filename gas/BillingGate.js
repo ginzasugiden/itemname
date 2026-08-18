@@ -200,11 +200,11 @@ function notifyBillingIssue_(store, result, blocked) {
 
 var BILLING_GATE_TEST_IDS = {
   // 契約あり・支払い済み・有効期限内 → ok:true を期待
-  SUBSCRIBED_ACTIVE: '',   // 例: 'tokyoflower'
+  SUBSCRIBED_ACTIVE: 'zztest_itemname_ok',
   // servicesにitemnameが含まれない（未契約） → ok:false, reason:'NOT_SUBSCRIBED' を期待
-  NOT_SUBSCRIBED: '',
+  NOT_SUBSCRIBED: 'zztest_itemname_nosub',
   // servicesにitemnameは含まれるが expiry が過去 → ok:false, reason:'LICENSE_EXPIRED' を期待
-  EXPIRED: '',
+  EXPIRED: 'zztest_itemname_expired',
 };
 
 function testBillingGate_SubscribedActive() {
