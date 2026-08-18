@@ -548,9 +548,7 @@ function handleRunManual_(postData) {
     }
 
     const forceDryRun = !productionRun;
-    // [billing-gate] account側 handleVerifyMember 照合用のログインIDを合流させる
-    const credentialsWithId = Object.assign({}, ctx.credentials, { id: ctx.userId });
-    runForStore(ctx.sid, credentialsWithId, forceDryRun, useNextEvent);
+    runForStore(ctx.sid, ctx.credentials, forceDryRun, useNextEvent);
 
     if (productionRun) {
       response.success = true;

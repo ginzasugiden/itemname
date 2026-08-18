@@ -47,9 +47,8 @@ function run() {
         const credentials = {
           serviceSecret: store.serviceSecret,
           licenseKey: store.licenseKey,
-          id: store.id, // [billing-gate] account側 handleVerifyMember 照合用のログインID
         };
-
+        
         runForStore(store.sid, credentials, false);
         
         Logger.log('--- 店舗処理完了: ' + store.sname + ' ---');
@@ -88,13 +87,6 @@ function run() {
  */
 function runForStore(sid, credentials, forceDryRun, useNextEvent) {
   const startTime = new Date();
-
-  // [billing-gate] Phase1パイロット: 課金・契約状態を確認し、NGなら以降の処理をスキップする
-  const gate = checkBillingGate_({ sid: sid, id: credentials && credentials.id });
-  if (!gate.allow) {
-    Logger.log('[billing-gate] 実行スキップ (sid: ' + sid + '): ' + gate.result.reason + ' - ' + gate.result.message);
-    return;
-  }
 
   // 設定読込（店舗別）
   const settings = loadSettings(sid);
@@ -653,7 +645,6 @@ function testDryRun() {
     const credentials = {
       serviceSecret: store.serviceSecret,
       licenseKey: store.licenseKey,
-      id: store.id, // [billing-gate] account側 handleVerifyMember 照合用のログインID
     };
     runForStore(store.sid, credentials, true);
   }
