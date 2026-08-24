@@ -157,14 +157,47 @@ function checkBillingGate_(store) {
   return { allow: false, result: result };
 }
 
+// 同一店舗・同一理由の通知を抑制するクールダウン期間（1日1回まで）。
+// CacheServiceは最大6時間しか保持できないため、24時間クールダウンにはPropertiesServiceを使う。
+var BILLING_NOTIFY_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * 通知を送るべきか判定する（エッジトリガー: 理由が変化した時 or クールダウン満了時のみ送る）。
+ */
+function shouldNotifyBillingIssue_(store, result) {
+  var props = PropertiesService.getScriptProperties();
+  var lastReason = props.getProperty('billing_last_reason_' + store.sid);
+  var lastAt = Number(props.getProperty('billing_last_notified_at_' + store.sid) || 0);
+
+  var isNewReason = lastReason !== result.reason;
+  var cooldownExpired = (Date.now() - lastAt) > BILLING_NOTIFY_COOLDOWN_MS;
+
+  return isNewReason || cooldownExpired;
+}
+
+/**
+ * 通知送信後に状態を記録する（次回のエッジトリガー判定・クールダウン計算に使用）。
+ */
+function recordBillingNotification_(store, result) {
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty('billing_last_reason_' + store.sid, result.reason);
+  props.setProperty('billing_last_notified_at_' + store.sid, String(Date.now()));
+}
+
 /**
  * 課金ゲートの異常（ブロック or 疎通エラー）をGSD管理者に通知する。
  * 店舗自身の notifyEmail/notifySlack 設定とは独立（顧客に「あなたは未払いです」を自動送信しない設計）。
+ * 同一店舗・同一理由が続く間は1日1回にデデュープする（理由が変わった場合は即通知）。
  */
 function notifyBillingIssue_(store, result, blocked) {
   var adminEmail = getBillingAdminEmail_();
   if (!adminEmail) {
     Logger.log('[BillingGate] BILLING_ADMIN_EMAIL 未設定のため管理者通知をスキップしました');
+    return;
+  }
+
+  if (!shouldNotifyBillingIssue_(store, result)) {
+    Logger.log('[BillingGate] 通知を抑制しました（同一理由でクールダウン中）: ' + (store.sname || store.sid) + ' reason=' + result.reason);
     return;
   }
 
@@ -183,6 +216,7 @@ function notifyBillingIssue_(store, result, blocked) {
 
   try {
     GmailApp.sendEmail(adminEmail, subject, body);
+    recordBillingNotification_(store, result);
   } catch (e) {
     Logger.log('[BillingGate] 管理者メール送信失敗: ' + e.message);
   }

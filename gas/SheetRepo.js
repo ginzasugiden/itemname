@@ -809,7 +809,11 @@ function getAllActiveStores() {
   const stores = [];
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
-    
+
+    // [billing-gate] テスト行（id が zztest_ で始まる）は本番cronの対象外
+    const rowId = row[colIndex['id']];
+    if (rowId && String(rowId).indexOf('zztest_') === 0) continue;
+
     // 有効期限チェック
     const expiry = row[colIndex['expiry']];
     if (expiry) {
