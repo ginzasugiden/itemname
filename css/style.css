@@ -1164,6 +1164,76 @@ body {
   font-weight: 600;
 }
 
+/* 設定タブ: 現在の動作（表示のみ） */
+.settings-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 15px;
+  margin-bottom: 12px;
+}
+
+.settings-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  font-size: 15px;
+  color: var(--gray-800);
+}
+
+.settings-summary-label {
+  font-size: 12px;
+  color: var(--gray-500);
+}
+
+.settings-summary-note {
+  font-size: 13px;
+  color: var(--gray-600);
+  line-height: 1.7;
+  margin-bottom: 20px;
+}
+
+/* 設定タブ: 詳細設定アコーディオン */
+.settings-advanced {
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+}
+
+.settings-advanced > summary {
+  padding: 14px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gray-700);
+  cursor: pointer;
+  user-select: none;
+}
+
+.settings-advanced > summary:hover {
+  background: var(--gray-50);
+}
+
+.settings-advanced[open] > summary {
+  border-bottom: 1px solid var(--gray-200);
+  margin-bottom: 20px;
+}
+
+.settings-advanced > :not(summary) {
+  margin-left: 16px;
+  margin-right: 16px;
+}
+
+.settings-advanced > .form-actions {
+  margin-bottom: 16px;
+}
+
+/* 未実装の設定項目（一時的に非表示。index.html の TODO 参照） */
+.settings-unimplemented {
+  display: none !important;
+}
+
 /* イベント管理: 無効行 */
 .data-table tr.row-disabled {
   opacity: 0.5;

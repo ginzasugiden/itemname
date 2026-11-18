@@ -206,20 +206,27 @@ async function loadSettings() {
   if (result.success) {
     const settings = result.data.settings;
     
-    // 共通設定（全ユーザー表示）
+    // 共通設定（詳細設定内・全ユーザー表示）
     document.getElementById('settingMode').value = settings.mode || 'TARGET_LIST';
+    // TODO: 通知設定は未実装のためUI非表示（index.html の settings-unimplemented 参照）。値のセットは従来どおり
     document.getElementById('settingNotifySlack').checked = settings.notifySlack || false;
     document.getElementById('settingNotifyEmail').checked = settings.notifyEmail || false;
-    
+
     // 管理者専用設定（非表示でもフォーム値はセット）
     document.getElementById('settingDryRun').value = String(settings.dryRun);
     document.getElementById('settingMaxItems').value = settings.maxItemsPerRun || 500;
-    
+
     // ステータスカード更新
     document.getElementById('targetItemsCount').textContent = result.data.targetItemsCount + '件';
-    
+
     document.getElementById('currentMode').textContent = settings.dryRun ? 'DryRun' : '本番';
-    
+
+    // 設定タブの「現在の動作」表示（表示のみ）
+    document.getElementById('settingsSummaryMode').textContent =
+      settings.mode === 'ALL_ACTIVE' ? '販売中の全商品' : '指定した商品のみ';
+    document.getElementById('settingsSummaryRun').textContent =
+      settings.dryRun ? 'テスト中（DryRun・商品名は変更されません）' : '本番稼働中（商品名を自動更新）';
+
   } else {
     showToast(result.message || '設定の読み込みに失敗しました', 'error');
   }
@@ -234,13 +241,14 @@ async function saveSettings(event) {
   // 共通設定
   const settings = {
     mode: document.getElementById('settingMode').value,
-    dryRun: document.getElementById('settingDryRun').value === 'true',
     notifySlack: document.getElementById('settingNotifySlack').checked,
     notifyEmail: document.getElementById('settingNotifyEmail').checked,
   };
 
-  // [ROLE] 管理者のみ: 最大処理件数を含める
+  // [ROLE] 管理者のみ: DryRun・最大処理件数を含める
+  // （一般ユーザーには非表示のため送信しない。送らないキーはシート上の値がそのまま維持される）
   if (isAdmin()) {
+    settings.dryRun = document.getElementById('settingDryRun').value === 'true';
     settings.maxItemsPerRun = parseInt(document.getElementById('settingMaxItems').value, 10);
   }
   
