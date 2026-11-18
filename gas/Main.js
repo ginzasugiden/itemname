@@ -110,6 +110,10 @@ function runForStore(sid, credentials, forceDryRun, useNextEvent) {
     ? getNextEvents(now, events, settings)
     : getCurrentEvents(now, events, settings);
   
+  // 既知のprefix文言を登録（カスタム文言の多重付与・外し残し防止）
+  // 適用中（APPLIED）の即時適用prefixは、復元予約まで残す必要があるため除去対象にしない
+  setKnownEventPrefixes_(collectKnownPrefixes_(sid, currentEvents, false));
+
   if (currentEvents.length > 0) {
     Logger.log('適用イベント数: ' + currentEvents.length);
     for (const evt of currentEvents) {
@@ -152,6 +156,22 @@ function runForStore(sid, credentials, forceDryRun, useNextEvent) {
       Logger.log('古いログ削除: ' + deleted + '件');
     }
   }
+}
+
+/**
+ * 店舗で除去対象とするprefix文言を集める
+ * - EVENTSシートの全行（無効・期間外を含む）の long / mid / short
+ * - 今回適用するイベントの long / mid / short
+ * - 即時適用（RESTOREシート）で使われたprefix
+ * @param {string} sid - 店舗ID
+ * @param {Array} currentEvents - 今回適用するイベント
+ * @param {boolean} includeAppliedReservations - 適用中の即時適用prefixも含めるか
+ * @returns {Array<string>}
+ */
+function collectKnownPrefixes_(sid, currentEvents, includeAppliedReservations) {
+  return collectEventPrefixes_(loadAllEvents())
+    .concat(collectEventPrefixes_(currentEvents))
+    .concat(getRestorePrefixTexts_(sid, includeAppliedReservations));
 }
 
 // ==================== 対象商品取得 ====================
@@ -209,10 +229,13 @@ function processItems(targetItems, currentEvents, settings, backups, sid, creden
       }
       
       // TARGET_ITEMSシートを更新（店舗別）
+      // currentTitle は「RMS上の実際の商品名」を保存する。
+      // 実際に更新する場合のみ新しい商品名、それ以外（手動変更・変更なし・DryRun）は取得したRMSの値。
       if (targetItem.rowIndex && result.baseTitle) {
+        const willUpdate = result.needsUpdate && !settings.dryRun;
         updateTargetItemRow(targetItem.rowIndex, {
           baseTitle: result.baseTitle,
-          currentTitle: result.newTitle || targetItem.currentTitle,
+          currentTitle: willUpdate ? result.newTitle : (result.currentTitle || targetItem.currentTitle),
           lastUpdated: new Date(),
           status: result.status,
         }, sid);
@@ -254,6 +277,14 @@ function processItems(targetItems, currentEvents, settings, backups, sid, creden
           results[resultIndex].status = LOG_STATUS.FAILED;
           logsToWrite[resultIndex].status = LOG_STATUS.FAILED;
           logsToWrite[resultIndex].message = 'APIエラー: ' + (updateResult.error?.message || 'Unknown');
+
+          // 更新に失敗した商品は、シートの表示をRMSの実際の商品名・失敗ステータスに戻す
+          if (updateQueue[i].rowIndex) {
+            updateTargetItemRow(updateQueue[i].rowIndex, {
+              currentTitle: results[resultIndex].currentTitle,
+              status: LOG_STATUS.FAILED,
+            }, sid);
+          }
         }
       }
     }
@@ -299,6 +330,7 @@ function processSingleItem(targetItem, multiPrefixCandidates, currentEvents, eve
         itemManageNumber: targetItem.itemManageNumber,
         needsUpdate: false,
         baseTitle: baseTitle,
+        currentTitle: currentTitle,
         status: LOG_STATUS.MANUAL_CHANGE,
         log: {
           timestamp: new Date(),
@@ -325,6 +357,7 @@ function processSingleItem(targetItem, multiPrefixCandidates, currentEvents, eve
       itemManageNumber: targetItem.itemManageNumber,
       needsUpdate: false,
       baseTitle: baseTitle,
+      currentTitle: currentTitle,
       newTitle: newTitle,
       status: LOG_STATUS.SKIPPED,
       log: {
@@ -353,6 +386,7 @@ function processSingleItem(targetItem, multiPrefixCandidates, currentEvents, eve
     itemManageNumber: targetItem.itemManageNumber,
     needsUpdate: true,
     baseTitle: baseTitle,
+    currentTitle: currentTitle,
     newTitle: newTitle,
     status: status,
     log: {

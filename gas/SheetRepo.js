@@ -740,6 +740,30 @@ function getRestoreReservations(sid) {
 }
 
 /**
+ * 予約（即時適用）で使われたprefix文言の一覧を取得（prefix除去用）
+ * ※ シートが無い場合は作成せず空配列を返す
+ * @param {string} sid - 店舗ID
+ * @param {boolean} includeApplied - true: 適用中（APPLIED）の予約のprefixも含める
+ * @returns {Array<string>}
+ */
+function getRestorePrefixTexts_(sid, includeApplied) {
+  const sheet = getSpreadsheet_().getSheetByName(resolveSheetName_('RESTORE', sid));
+  if (!sheet) return [];
+
+  const data = sheet.getDataRange().getValues();
+  const seen = {};
+  const prefixes = [];
+  for (let i = 1; i < data.length; i++) {
+    const prefixText = data[i][2];
+    if (!data[i][0] || !prefixText || seen[prefixText]) continue;
+    if (!includeApplied && data[i][1] === RESTORE_STATUS.APPLIED) continue;
+    seen[prefixText] = true;
+    prefixes.push(String(prefixText));
+  }
+  return prefixes;
+}
+
+/**
  * 予約のステータスを更新
  */
 function updateRestoreStatus(reservationId, newStatus, sid) {

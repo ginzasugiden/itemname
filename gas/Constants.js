@@ -139,6 +139,15 @@ const EVENT_PREFIX_PATTERNS = [
   /^【[0-9]+倍】/,
 ];
 
+/**
+ * 過去に使用された、上の固定パターンに一致しないprefix文言。
+ * EVENTSシートから行が消えた（編集・削除された）後でも除去できるよう、ここに残す。
+ * 現在EVENTS / RESTOREシートにある文言は実行時に自動で除去対象になる（TitleLogic.gs setKnownEventPrefixes_）。
+ */
+const LEGACY_EVENT_PREFIXES = [
+  '【予告】お買い物マラソン',
+];
+
 // ==================== 削除候補の装飾【】 ====================
 const REMOVABLE_BRACKETS = [
   // 配送系（優先削除）

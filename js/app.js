@@ -226,7 +226,8 @@ async function loadSettings() {
     // ステータスカード更新
     document.getElementById('targetItemsCount').textContent = result.data.targetItemsCount + '件';
 
-    document.getElementById('currentMode').textContent = settings.dryRun ? 'DryRun' : '本番';
+    // カードは「稼働状態」（dryRun）。設定内の「実行モード」（mode）とは別物
+    document.getElementById('currentMode').textContent = settings.dryRun ? 'テスト中' : '本番稼働中';
 
     // 設定タブの「現在の動作」表示（表示のみ）
     document.getElementById('settingsSummaryMode').textContent =
@@ -355,6 +356,30 @@ async function loadTargetItems() {
     tbody.innerHTML = '<tr><td colspan="5" class="loading">読み込みに失敗しました</td></tr>';
     countDisplay.textContent = '0';
   }
+}
+
+// 更新ボタン: 「現在の商品名」をRMSの実際の値に同期してから一覧を再読み込み
+async function refreshTargetItems() {
+  const btn = document.getElementById('refreshItemsBtn');
+  const tbody = document.querySelector('#itemsTable tbody');
+
+  btn.disabled = true;
+  tbody.innerHTML = '<tr><td colspan="5" class="loading"><span class="spinner-dark"></span> RMSから最新の商品名を取得中...（件数により時間がかかります）</td></tr>';
+
+  try {
+    const result = await apiRequest('syncTargetTitles');
+
+    if (result.success) {
+      showToast(result.message, 'success');
+    } else if (!/不明なアクション/.test(result.message || '')) {
+      // バックエンドが同期に未対応（旧デプロイ）の場合は、従来どおり一覧の再読み込みのみ行う
+      showToast(result.message || 'RMSとの同期に失敗しました', 'warning');
+    }
+  } finally {
+    btn.disabled = false;
+  }
+
+  await loadTargetItems();
 }
 
 // 商品追加モーダル表示

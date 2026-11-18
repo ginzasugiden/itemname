@@ -163,20 +163,64 @@ function truncateToZenkakuLimit(str, limit) {
 // ==================== Prefix除去 ====================
 
 /**
+ * 実行ごとに登録する「既知のprefix文言」（固定パターン EVENT_PREFIX_PATTERNS に一致しないもの）。
+ * EVENTSシートのカスタム文言や即時適用のprefixは固定パターンでは外せず、
+ * 外せないprefixの手前に毎回prefixが付け足されて多重化するため、文字列一致で除去できるようにする。
+ * 長い文言から先に照合する。
+ */
+let KNOWN_EVENT_PREFIXES_ = [];
+
+/**
+ * 既知のprefix文言を登録（置き換え）。LEGACY_EVENT_PREFIXES は常に含まれる。
+ * @param {Array<string>} prefixes - prefix文言の一覧
+ */
+function setKnownEventPrefixes_(prefixes) {
+  const seen = {};
+  KNOWN_EVENT_PREFIXES_ = LEGACY_EVENT_PREFIXES.concat(prefixes || [])
+    .map(p => String(p === null || p === undefined ? '' : p).trim())
+    .filter(p => {
+      // 1文字以下は商品名の先頭を誤って削るおそれがあるため対象外
+      if (p.length < 2 || seen[p]) return false;
+      seen[p] = true;
+      return true;
+    })
+    .sort((a, b) => b.length - a.length);
+}
+
+/**
+ * イベント一覧からprefix文言（long / mid / short）を集める
+ * @param {Array} events - loadEvents() / loadAllEvents() / getCurrentEvents() の返値
+ * @returns {Array<string>}
+ */
+function collectEventPrefixes_(events) {
+  const prefixes = [];
+  for (const event of (events || [])) {
+    prefixes.push(event.prefixLong, event.prefixMid, event.prefixShort);
+  }
+  return prefixes.filter(p => p);
+}
+
+/**
  * イベントprefixを除去（先頭から連続するものをすべて）
+ * 固定パターンに加え、setKnownEventPrefixes_() で登録された文言と LEGACY_EVENT_PREFIXES も除去する
  */
 function stripEventPrefixes(title) {
   if (!title) return '';
-  
+
+  const literals = KNOWN_EVENT_PREFIXES_.length > 0 ? KNOWN_EVENT_PREFIXES_ : LEGACY_EVENT_PREFIXES;
+
   let result = title;
   let changed = true;
   let iterations = 0;
-  const maxIterations = 20; // [ME-1] 複数prefix対応のため上限引き上げ
-  
+  const maxIterations = 50; // 多重に付いたprefixも外し切れるよう上限引き上げ
+
   while (changed && iterations < maxIterations) {
     changed = false;
     iterations++;
-    
+
+    // prefix間の空白を除去（最後にtrimするので結果は変わらない）
+    result = result.replace(/^\s+/, '');
+
     for (const pattern of EVENT_PREFIX_PATTERNS) {
       if (pattern.test(result)) {
         result = result.replace(pattern, '');
@@ -184,9 +228,31 @@ function stripEventPrefixes(title) {
         break;
       }
     }
+    if (changed) continue;
+
+    for (const literal of literals) {
+      if (result.indexOf(literal) === 0) {
+        result = result.substring(literal.length);
+        changed = true;
+        break;
+      }
+    }
   }
-  
+
   return result.trim();
+}
+
+/**
+ * 即時適用用の商品名を生成（既知のprefixを外してから prefixText を1つだけ付ける）
+ * ※ 呼び出し前に setKnownEventPrefixes_() へ prefixText を含めて登録しておくこと
+ * @param {string} currentTitle - RMS上の現在の商品名
+ * @param {string} prefixText - 付与するprefix
+ * @param {number} maxLen - 全角換算の上限
+ * @returns {string}
+ */
+function buildApplyNowTitle_(currentTitle, prefixText, maxLen) {
+  const newTitle = prefixText + stripEventPrefixes(currentTitle);
+  return calcZenkakuLength(newTitle) > maxLen ? truncateToZenkakuLimit(newTitle, maxLen) : newTitle;
 }
 
 /**

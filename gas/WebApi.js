@@ -73,6 +73,9 @@ function handleRequest_(e) {
       case 'bulkAddTargetItems':
         return handleBulkAddTargetItems_(postData);
 
+      case 'syncTargetTitles':
+        return handleSyncTargetTitles_(postData);
+
       case 'resetBackups':
         return handleResetBackups_(postData);
 
@@ -821,6 +824,71 @@ function handleBulkAddTargetItems_(postData) {
   return createJsonResponse_(response);
 }
 
+/**
+ * 対象商品の「現在の商品名」をRMSの実際の値に同期（表示用）
+ * RMSからは読み取りのみ。T_{sid} の currentTitle 列だけを書き換える（ステータス・最終更新・バックアップは変更しない）。
+ * 件数が多い場合は時間内に処理できた分だけ同期し、残り件数を返す。
+ */
+function handleSyncTargetTitles_(postData) {
+  const response = { success: false, message: '', data: null };
+
+  const ctx = getUserContext_(postData);
+  if (!ctx) {
+    response.message = '認証が必要です。再ログインしてください。';
+    return createJsonResponse_(response);
+  }
+
+  const lock = LockService.getScriptLock();
+
+  try {
+    if (!lock.tryLock(5000)) {
+      response.message = '他の処理が実行中のため同期できませんでした。しばらく待ってから再度お試しください。';
+      return createJsonResponse_(response);
+    }
+
+    const startedAt = Date.now();
+    const timeBudgetMs = 4 * 60 * 1000; // GASの実行時間制限（6分）に対する余裕
+    const items = loadTargetItems(ctx.sid);
+    let checked = 0;
+    let updated = 0;
+    let failed = 0;
+
+    for (const item of items) {
+      if (Date.now() - startedAt > timeBudgetMs) break;
+
+      const result = getItem(item.itemManageNumber, ctx.credentials);
+      checked++;
+
+      if (result.success && result.item) {
+        const title = result.item.title || '';
+        if (title && title !== item.currentTitle) {
+          updateTargetItemRow(item.rowIndex, { currentTitle: title }, ctx.sid);
+          updated++;
+        }
+      } else {
+        failed++;
+      }
+
+      Utilities.sleep(500); // API制限対策
+    }
+
+    const remaining = items.length - checked;
+
+    response.success = true;
+    response.message = 'RMSの商品名と同期しました（確認: ' + checked + '件、表示を更新: ' + updated + '件'
+      + (failed > 0 ? '、取得失敗: ' + failed + '件' : '')
+      + (remaining > 0 ? '、未処理: ' + remaining + '件' : '') + '）';
+    response.data = { checked: checked, updated: updated, failed: failed, remaining: remaining };
+
+  } catch (e) {
+    response.message = '商品名の同期に失敗しました: ' + e.message;
+  } finally {
+    lock.releaseLock();
+  }
+
+  return createJsonResponse_(response);
+}
+
 // ==================== イベント管理（管理者のみ） ====================
 
 /**
@@ -1146,6 +1214,9 @@ function handleApplyNow_(postData) {
       return createJsonResponse_(response);
     }
 
+    // 既知のprefix（EVENTS・過去の即時適用・今回の文言）を登録し、同じprefixの重ね付けを防ぐ
+    setKnownEventPrefixes_(collectKnownPrefixes_(ctx.sid, [], true).concat([prefixText]));
+
     const reservationId = 'RSV_' + Date.now();
     const maxLen = 127; // 全角換算上限
     const updateQueue = [];
@@ -1164,10 +1235,7 @@ function handleApplyNow_(postData) {
 
       var currentTitle = itemResult.item.title || '';
       // prefix付きの商品名を生成（文字数制限考慮）
-      var newTitle = prefixText + stripEventPrefixes(currentTitle);
-      if (calcZenkakuLength(newTitle) > maxLen) {
-        newTitle = truncateToZenkakuLimit(newTitle, maxLen);
-      }
+      var newTitle = buildApplyNowTitle_(currentTitle, prefixText, maxLen);
 
       updateQueue.push({ manageNumber: item.itemManageNumber, newTitle: newTitle });
       restoreItems.push({

@@ -81,7 +81,7 @@
         <div class="card status-card">
           <div class="card-icon">⚡</div>
           <div class="card-content">
-            <h3>実行モード</h3>
+            <h3>稼働状態</h3>
             <p id="currentMode">-</p>
           </div>
         </div>
@@ -202,7 +202,7 @@
             <div class="card-header">
               <h2 class="card-title">📦 対象商品管理</h2>
               <div class="header-actions">
-                <button class="btn-secondary btn-sm" onclick="loadTargetItems()">🔄 更新</button>
+                <button class="btn-secondary btn-sm" onclick="refreshTargetItems()" id="refreshItemsBtn" title="RMSの実際の商品名を取得して表示を更新します">🔄 更新</button>
                 <button class="btn-primary btn-sm" onclick="showAddItemModal()">➕ 商品追加</button>
               </div>
             </div>
