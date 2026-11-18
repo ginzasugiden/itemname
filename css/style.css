@@ -1169,7 +1169,12 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 15px;
+  align-items: start;
   margin-bottom: 12px;
+}
+
+.settings-summary > .form-group {
+  margin-bottom: 0;
 }
 
 .settings-summary-item {
@@ -1200,6 +1205,7 @@ body {
 .settings-advanced {
   border: 1px solid var(--gray-200);
   border-radius: var(--radius);
+  margin-bottom: 25px;
 }
 
 .settings-advanced > summary {
@@ -1223,10 +1229,6 @@ body {
 .settings-advanced > :not(summary) {
   margin-left: 16px;
   margin-right: 16px;
-}
-
-.settings-advanced > .form-actions {
-  margin-bottom: 16px;
 }
 
 /* 未実装の設定項目（一時的に非表示。index.html の TODO 参照） */

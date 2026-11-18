@@ -113,20 +113,23 @@
           <div class="card">
             <h2 class="card-title">⚙️ 設定</h2>
             <form id="settingsForm" onsubmit="saveSettings(event)">
-              <!-- 現在の動作（表示のみ）。変更は下の「詳細設定」から -->
+              <!-- 現在の動作。稼働状態のみここで切り替え可能（全ユーザー）。それ以外は下の「詳細設定」から -->
               <div class="settings-summary">
+                <div class="form-group">
+                  <label for="settingDryRun">稼働状態</label>
+                  <select id="settingDryRun">
+                    <option value="true">テスト中（商品名は変更されません）</option>
+                    <option value="false">本番稼働中（商品名が実際に変更されます）</option>
+                  </select>
+                  <small>切り替えたら「設定を保存」を押してください</small>
+                </div>
                 <div class="settings-summary-item">
                   <span class="settings-summary-label">処理対象</span>
                   <strong id="settingsSummaryMode">-</strong>
                 </div>
-                <div class="settings-summary-item">
-                  <span class="settings-summary-label">自動実行</span>
-                  <strong id="settingsSummaryRun">-</strong>
-                </div>
               </div>
               <p class="settings-summary-note">
-                通常はこのままご利用いただけます。商品の追加は「📦 対象商品」、スケジュールの確認は「📅 イベント」タブから行えます。<br>
-                テスト／本番の切り替えは管理者が行います。
+                通常はこのままご利用いただけます。商品の追加は「📦 対象商品」、スケジュールの確認は「📅 イベント」タブから行えます。
               </p>
 
               <!-- 詳細設定（既定は閉じた状態）。項目は削除せず、ここに折りたたんでいる -->
@@ -172,32 +175,23 @@
                   </div>
                   <div class="settings-grid">
                     <div class="form-group">
-                      <label for="settingDryRun">DryRunモード</label>
-                      <select id="settingDryRun">
-                        <option value="true">ON（テスト実行）</option>
-                        <option value="false">OFF（本番実行）</option>
-                      </select>
-                      <small>ON: 実際の更新は行わずテストのみ / OFF: 実際にAPIで商品名を更新</small>
-                    </div>
-
-                    <div class="form-group">
                       <label for="settingMaxItems">1回の最大処理件数</label>
                       <input type="number" id="settingMaxItems" min="1" max="1000" value="500">
                       <small>1回の実行で処理する商品の最大数</small>
                     </div>
                   </div>
                 </div>
-
-                <div class="form-actions">
-                  <button type="submit" class="btn-primary" id="saveSettingsBtn">
-                    <span class="btn-text">💾 設定を保存</span>
-                    <span class="btn-loading" style="display: none;">
-                      <span class="spinner"></span> 保存中...
-                    </span>
-                  </button>
-                  <button type="button" class="btn-secondary" onclick="loadSettings()">リセット</button>
-                </div>
               </details>
+
+              <div class="form-actions">
+                <button type="submit" class="btn-primary" id="saveSettingsBtn">
+                  <span class="btn-text">💾 設定を保存</span>
+                  <span class="btn-loading" style="display: none;">
+                    <span class="spinner"></span> 保存中...
+                  </span>
+                </button>
+                <button type="button" class="btn-secondary" onclick="loadSettings()">リセット</button>
+              </div>
             </form>
           </div>
         </div>
