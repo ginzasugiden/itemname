@@ -11,6 +11,9 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwL_odLRjbnirbyP18mtvOX
 // 削除対象の一時保存
 let deleteTargetItem = null;
 
+// 読み込み済みの稼働状態（dryRun）。null = 設定が未読み込み（この間は保存不可）
+let loadedDryRun = null;
+
 // ==================== セッション管理 ====================
 const Session = {
   save(data) {
@@ -167,6 +170,7 @@ async function handleLogin(event) {
 
 function logout() {
   Session.clear();
+  loadedDryRun = null;
   showLogin();
   showToast('ログアウトしました', 'success');
   
@@ -206,20 +210,28 @@ async function loadSettings() {
   if (result.success) {
     const settings = result.data.settings;
     
-    // 共通設定（全ユーザー表示）
+    // 共通設定（詳細設定内・全ユーザー表示）
     document.getElementById('settingMode').value = settings.mode || 'TARGET_LIST';
+    // TODO: 通知設定は未実装のためUI非表示（index.html の settings-unimplemented 参照）。値のセットは従来どおり
     document.getElementById('settingNotifySlack').checked = settings.notifySlack || false;
     document.getElementById('settingNotifyEmail').checked = settings.notifyEmail || false;
-    
-    // 管理者専用設定（非表示でもフォーム値はセット）
+
+    // 稼働状態（通常表示・全ユーザー）
     document.getElementById('settingDryRun').value = String(settings.dryRun);
+    loadedDryRun = settings.dryRun === true;
+
+    // 管理者専用設定（非表示でもフォーム値はセット）
     document.getElementById('settingMaxItems').value = settings.maxItemsPerRun || 500;
-    
+
     // ステータスカード更新
     document.getElementById('targetItemsCount').textContent = result.data.targetItemsCount + '件';
-    
+
     document.getElementById('currentMode').textContent = settings.dryRun ? 'DryRun' : '本番';
-    
+
+    // 設定タブの「現在の動作」表示（表示のみ）
+    document.getElementById('settingsSummaryMode').textContent =
+      settings.mode === 'ALL_ACTIVE' ? '販売中の全商品' : '指定した商品のみ';
+
   } else {
     showToast(result.message || '設定の読み込みに失敗しました', 'error');
   }
@@ -227,14 +239,31 @@ async function loadSettings() {
 
 async function saveSettings(event) {
   event.preventDefault();
-  
+
+  // 設定の読み込み前は保存しない（フォームの初期値でシートを上書きしないため）
+  if (loadedDryRun === null) {
+    showToast('設定の読み込みが完了していません。「リセット」で再読み込みしてからお試しください', 'error');
+    return;
+  }
+
+  const dryRunSelect = document.getElementById('settingDryRun');
+  const dryRun = dryRunSelect.value === 'true';
+
+  // テスト中 → 本番稼働 への切り替え時のみ確認（キャンセル時は保存せず表示を戻す）
+  if (loadedDryRun && !dryRun) {
+    if (!confirm('本番稼働に切り替えます。次回の実行から楽天の商品名が実際に変更されます。よろしいですか？')) {
+      dryRunSelect.value = String(loadedDryRun);
+      return;
+    }
+  }
+
   const btn = document.getElementById('saveSettingsBtn');
   setButtonLoading(btn, true);
-  
+
   // 共通設定
   const settings = {
     mode: document.getElementById('settingMode').value,
-    dryRun: document.getElementById('settingDryRun').value === 'true',
+    dryRun: dryRun,
     notifySlack: document.getElementById('settingNotifySlack').checked,
     notifyEmail: document.getElementById('settingNotifyEmail').checked,
   };
@@ -243,11 +272,12 @@ async function saveSettings(event) {
   if (isAdmin()) {
     settings.maxItemsPerRun = parseInt(document.getElementById('settingMaxItems').value, 10);
   }
-  
+
   try {
     const result = await apiRequest('updateSettings', { settings });
-    
+
     if (result.success) {
+      loadedDryRun = dryRun;
       showToast('設定を保存しました', 'success');
       loadSettings(); // 再読み込み
     } else {

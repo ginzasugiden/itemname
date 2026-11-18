@@ -97,69 +97,92 @@
 
       <!-- タブナビゲーション -->
       <nav class="tab-nav">
-        <button class="tab-btn active" data-tab="settings">⚙️ 設定</button>
-        <button class="tab-btn" data-tab="items">📦 対象商品</button>
+        <!-- 既定タブは「対象商品」。設定タブを開かなくても日常操作（商品追加・イベント確認）ができるようにしている -->
+        <button class="tab-btn active" data-tab="items">📦 対象商品</button>
         <button class="tab-btn" data-tab="events">📅 イベント</button>
         <button class="tab-btn" data-tab="logs">📋 ログ</button>
         <button class="tab-btn" data-tab="manual">▶️ 手動実行</button>
         <button class="tab-btn admin-only" data-tab="reserve">⏰ 予約実行</button>
+        <button class="tab-btn" data-tab="settings">⚙️ 設定</button>
       </nav>
 
       <!-- タブコンテンツ -->
       <div class="tab-contents">
         <!-- 設定タブ -->
-        <div class="tab-content active" id="tab-settings">
+        <div class="tab-content" id="tab-settings">
           <div class="card">
-            <h2 class="card-title">⚙️ 基本設定</h2>
+            <h2 class="card-title">⚙️ 設定</h2>
             <form id="settingsForm" onsubmit="saveSettings(event)">
-              <div class="settings-grid">
+              <!-- 現在の動作。稼働状態のみここで切り替え可能（全ユーザー）。それ以外は下の「詳細設定」から -->
+              <div class="settings-summary">
                 <div class="form-group">
-                  <label for="settingMode">実行モード</label>
-                  <select id="settingMode">
-                    <option value="TARGET_LIST">TARGET_LIST（指定商品のみ）</option>
-                    <option value="ALL_ACTIVE">ALL_ACTIVE（全商品）</option>
-                  </select>
-                  <small>TARGET_LIST: 指定した商品のみ処理 / ALL_ACTIVE: 販売中の全商品を処理</small>
-                </div>
-
-                <div class="form-group">
-                  <label for="settingDryRun">DryRunモード</label>
+                  <label for="settingDryRun">稼働状態</label>
                   <select id="settingDryRun">
-                    <option value="true">ON（テスト実行）</option>
-                    <option value="false">OFF（本番実行）</option>
+                    <option value="true">テスト中（商品名は変更されません）</option>
+                    <option value="false">本番稼働中（商品名が実際に変更されます）</option>
                   </select>
-                  <small>ON: 実際の更新は行わずテストのみ / OFF: 実際にAPIで商品名を更新</small>
+                  <small>切り替えたら「設定を保存」を押してください</small>
                 </div>
-
-                <div class="form-group">
-                  <label>通知設定</label>
-                  <div class="checkbox-group">
-                    <label class="checkbox-label">
-                      <input type="checkbox" id="settingNotifySlack">
-                      Slack通知
-                    </label>
-                    <label class="checkbox-label">
-                      <input type="checkbox" id="settingNotifyEmail">
-                      メール通知
-                    </label>
-                  </div>
+                <div class="settings-summary-item">
+                  <span class="settings-summary-label">処理対象</span>
+                  <strong id="settingsSummaryMode">-</strong>
                 </div>
               </div>
+              <p class="settings-summary-note">
+                通常はこのままご利用いただけます。商品の追加は「📦 対象商品」、スケジュールの確認は「📅 イベント」タブから行えます。
+              </p>
 
-              <!-- 管理者専用設定（一般ユーザーには非表示） -->
-              <div class="admin-only" id="adminSettings">
-                <div class="admin-settings-header">
-                  <h3 class="admin-settings-title">🔧 開発者設定</h3>
-                </div>
+              <!-- 詳細設定（既定は閉じた状態）。項目は削除せず、ここに折りたたんでいる -->
+              <details class="settings-advanced" id="advancedSettings">
+                <summary>詳細設定</summary>
+
                 <div class="settings-grid">
                   <div class="form-group">
-                    <label for="settingMaxItems">1回の最大処理件数</label>
-                    <input type="number" id="settingMaxItems" min="1" max="1000" value="500">
-                    <small>1回の実行で処理する商品の最大数</small>
+                    <label for="settingMode">実行モード</label>
+                    <select id="settingMode">
+                      <option value="TARGET_LIST">TARGET_LIST（指定商品のみ）</option>
+                      <option value="ALL_ACTIVE">ALL_ACTIVE（全商品）</option>
+                    </select>
+                    <small>TARGET_LIST: 指定した商品のみ処理 / ALL_ACTIVE: 販売中の全商品を処理</small>
                   </div>
                 </div>
-              </div>
-              
+
+                <!-- TODO: 通知設定は未実装のため一時的に非表示。
+                     送信先（slackWebhookUrl / notifyEmailAddress）の入力欄と S_{sid} シートの保存行が無く、
+                     チェックを入れても通知は送信されない（gas/Main.js sendNotification 参照）。
+                     送信先の入力・保存を実装したら settings-unimplemented を外して再表示する。
+                     ※ 保存処理（notifySlack / notifyEmail の送信）は従来どおり維持している。 -->
+                <div class="settings-grid settings-unimplemented">
+                  <div class="form-group">
+                    <label>通知設定</label>
+                    <div class="checkbox-group">
+                      <label class="checkbox-label">
+                        <input type="checkbox" id="settingNotifySlack">
+                        Slack通知
+                      </label>
+                      <label class="checkbox-label">
+                        <input type="checkbox" id="settingNotifyEmail">
+                        メール通知
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 管理者専用設定（一般ユーザーには非表示） -->
+                <div class="admin-only" id="adminSettings">
+                  <div class="admin-settings-header">
+                    <h3 class="admin-settings-title">🔧 開発者設定</h3>
+                  </div>
+                  <div class="settings-grid">
+                    <div class="form-group">
+                      <label for="settingMaxItems">1回の最大処理件数</label>
+                      <input type="number" id="settingMaxItems" min="1" max="1000" value="500">
+                      <small>1回の実行で処理する商品の最大数</small>
+                    </div>
+                  </div>
+                </div>
+              </details>
+
               <div class="form-actions">
                 <button type="submit" class="btn-primary" id="saveSettingsBtn">
                   <span class="btn-text">💾 設定を保存</span>
@@ -174,7 +197,7 @@
         </div>
 
         <!-- 対象商品タブ -->
-        <div class="tab-content" id="tab-items">
+        <div class="tab-content active" id="tab-items">
           <div class="card">
             <div class="card-header">
               <h2 class="card-title">📦 対象商品管理</h2>
